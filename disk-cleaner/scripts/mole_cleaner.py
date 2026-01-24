@@ -7,6 +7,7 @@ Mole Cleaner - Mac 智能磁盘清理工具
 """
 
 import argparse
+import base64
 import json
 import os
 import random
@@ -137,6 +138,9 @@ class MoleCleaner:
 
     # 加装 1TB SSD 价格约 3000 RMB，即约 2.93 RMB/GB
     SSD_PRICE_PER_GB_RMB = 3000 / 1024  # ≈ 2.93 RMB/GB
+
+    # 鼹鼠图片路径
+    MOLE_IMAGE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "mole_cleaner.jpg")
 
     def __init__(self):
         self.homebrew_path = self._find_homebrew()
@@ -807,6 +811,16 @@ class MoleCleaner:
         """获取随机的 tw93 夸夸"""
         return random.choice(self.TW93_PRAISES)
 
+    def _get_mole_image_base64(self) -> Optional[str]:
+        """获取鼹鼠图片的 base64 编码"""
+        try:
+            if os.path.exists(self.MOLE_IMAGE_PATH):
+                with open(self.MOLE_IMAGE_PATH, "rb") as f:
+                    return base64.b64encode(f.read()).decode("utf-8")
+        except Exception:
+            pass
+        return None
+
     def generate_achievement_page(self, freed_bytes: int, before_available: str, after_available: str) -> str:
         """生成精美的成就页面"""
         freed_human = self._format_size(freed_bytes)
@@ -898,6 +912,7 @@ class MoleCleaner:
         freed_human = self._format_size(freed_bytes)
         money_saved, money_comment = self._calculate_money_saved(freed_bytes)
         praise = self._get_random_praise()
+        mole_image_base64 = self._get_mole_image_base64()
 
         freed_gb = freed_bytes / (1024 ** 3)
         photos_equivalent = int(freed_gb * 250)
@@ -958,6 +973,7 @@ class MoleCleaner:
         }}
 
         .icon {{ font-size: 40px; }}
+        .icon img {{ width: 80px; height: auto; }}
 
         .title {{
             font-size: 28px;
@@ -1108,6 +1124,13 @@ class MoleCleaner:
             color: var(--text-tertiary);
         }}
 
+        .footer-mole {{
+            width: 120px;
+            height: auto;
+            margin-bottom: 12px;
+            opacity: 0.9;
+        }}
+
         /* Mobile */
         @media (max-width: 480px) {{
             body {{ padding: 16px; }}
@@ -1131,7 +1154,7 @@ class MoleCleaner:
 <body>
     <div class="page">
         <header class="header">
-            <div class="icon">🦔</div>
+            <div class="icon">{'<img src="data:image/jpeg;base64,' + mole_image_base64 + '" alt="Mole">' if mole_image_base64 else '🦔'}</div>
             <h1 class="title">清理完成</h1>
         </header>
 
@@ -1176,7 +1199,8 @@ class MoleCleaner:
         </section>
 
         <footer class="footer">
-            感谢开源，感谢 tw93
+            {'<img src="data:image/jpeg;base64,' + mole_image_base64 + '" alt="Mole" class="footer-mole">' if mole_image_base64 else ''}
+            <div>感谢开源，感谢 tw93</div>
         </footer>
     </div>
 </body>
