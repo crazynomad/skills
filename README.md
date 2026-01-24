@@ -16,6 +16,16 @@ Analyze SRT subtitle files to generate engaging, viral-potential video titles. O
 ### [youtube-downloader](./youtube-downloader)
 A powerful video downloader wrapping `yt-dlp`. Supports downloading videos, playlists, subtitles, and metadata from YouTube and 1000+ other sites.
 
+## Prerequisites & Limitations
+
+While most skills are cross-platform, some have specific system requirements:
+
+- **disk-cleaner**: ⚠️ **macOS Only**. This skill relies on the `mole` CLI tool which is designed for macOS system cleaning.
+- **pdf-to-images**: Requires **[ImageMagick](https://imagemagick.org/)** to be installed on the system.
+- **youtube-downloader**: Requires **[FFmpeg](https://ffmpeg.org/)** for audio extraction and format merging.
+
+All scripts assume a working **Python 3.10+** environment.
+
 ## Usage
 
 These skills are structured for use with Claude Code or similar agentic environments.
