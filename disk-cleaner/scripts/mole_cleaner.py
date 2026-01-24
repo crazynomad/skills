@@ -989,13 +989,16 @@ class MoleCleaner:
         photos_equivalent = int(freed_gb * 250)
         songs_equivalent = int(freed_gb * 200)
 
+        # 货币转换 (7 RMB ≈ 1 USD)
+        money_saved_usd = money_saved / 7
+
         # 生成各语言的夸夸和评语
         praise_hans = self._get_random_praise_i18n("zh-Hans")
         praise_hant = self._get_random_praise_i18n("zh-Hant")
         praise_en = self._get_random_praise_i18n("en")
         comment_hans = self._get_money_comment_i18n(money_saved, "zh-Hans")
-        comment_hant = self._get_money_comment_i18n(money_saved, "zh-Hant")
-        comment_en = self._get_money_comment_i18n(money_saved, "en")
+        comment_hant = self._get_money_comment_i18n(money_saved_usd * 7, "zh-Hant")  # 用等值判断
+        comment_en = self._get_money_comment_i18n(money_saved_usd * 7, "en")
 
         # 转义引号
         def escape_js(s):
@@ -1110,7 +1113,7 @@ class MoleCleaner:
 
         <section class="hero">
             <div class="hero-main">{freed_human}</div>
-            <div class="hero-sub"><span data-i18n="saved_prefix"></span> <span class="money">¥{money_saved:.2f}</span></div>
+            <div class="hero-sub"><span data-i18n="saved_prefix"></span> <span class="money" data-rmb="{money_saved:.2f}" data-usd="{money_saved_usd:.2f}"></span></div>
             <div class="hero-quip" data-i18n="quip"></div>
         </section>
 
@@ -1124,7 +1127,7 @@ class MoleCleaner:
                 <div class="label" data-i18n="songs"></div>
             </div>
             <div class="stat">
-                <div class="num">¥3k/T</div>
+                <div class="num" data-i18n="ssd_price_value"></div>
                 <div class="label" data-i18n="ssd_price"></div>
             </div>
         </section>
@@ -1164,9 +1167,11 @@ class MoleCleaner:
                 photos: '张照片',
                 songs: '首歌曲',
                 ssd_price: 'SSD 价格',
+                ssd_price_value: '¥3k/T',
                 praise: '{escape_js(praise_hans)}',
                 author_desc: 'Mole 作者',
-                thanks: '感谢开源，感谢 tw93'
+                thanks: '感谢开源，感谢 tw93',
+                currency: 'rmb'
             }},
             'zh-Hant': {{
                 title: '清理完成',
@@ -1175,9 +1180,11 @@ class MoleCleaner:
                 photos: '張照片',
                 songs: '首歌曲',
                 ssd_price: 'SSD 價格',
+                ssd_price_value: '$430/T',
                 praise: '{escape_js(praise_hant)}',
                 author_desc: 'Mole 作者',
-                thanks: '感謝開源，感謝 tw93'
+                thanks: '感謝開源，感謝 tw93',
+                currency: 'usd'
             }},
             'en': {{
                 title: 'Cleanup Complete',
@@ -1186,9 +1193,11 @@ class MoleCleaner:
                 photos: 'PHOTOS',
                 songs: 'SONGS',
                 ssd_price: 'SSD PRICE',
+                ssd_price_value: '$430/T',
                 praise: '{escape_js(praise_en)}',
                 author_desc: 'Mole Author',
-                thanks: 'Thanks to open source, thanks to tw93'
+                thanks: 'Thanks to open source, thanks to tw93',
+                currency: 'usd'
             }}
         }};
 
@@ -1218,6 +1227,17 @@ class MoleCleaner:
                     el.textContent = texts[key];
                 }}
             }});
+
+            // 处理货币显示
+            const moneyEl = document.querySelector('.money');
+            if (moneyEl) {{
+                if (texts.currency === 'rmb') {{
+                    moneyEl.textContent = '¥' + moneyEl.dataset.rmb;
+                }} else {{
+                    moneyEl.textContent = '$' + moneyEl.dataset.usd;
+                }}
+            }}
+
             document.documentElement.lang = locale === 'zh-Hans' ? 'zh-CN' : (locale === 'zh-Hant' ? 'zh-TW' : 'en');
         }}
 
