@@ -1,6 +1,6 @@
-# Media Processing Skills
+# Skills for Non-Coder
 
-This repository contains a collection of specialized agent skills for media and content processing. These skills are designed to be used by AI agents (like Claude) to perform complex tasks related to audio, video, and document manipulation.
+This repository contains a collection of specialized agent skills designed specifically for **non-coders** to handle media and content processing tasks. These skills allow anyone to perform complex operations related to audio, video, and document manipulation through simple AI instructions.
 
 ## Skills
 

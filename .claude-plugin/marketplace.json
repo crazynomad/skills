@@ -5,7 +5,7 @@
     "email": "burn.wang@example.com"
   },
   "metadata": {
-    "description": "Collection of media processing agent skills",
+    "description": "Media processing agent skills for non-coders",
     "version": "1.0.0"
   },
   "plugins": [
