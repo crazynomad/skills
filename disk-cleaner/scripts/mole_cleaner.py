@@ -1189,7 +1189,7 @@ class MoleCleaner:
                 <div class="avatar">🦔</div>
                 <div class="author-text">
                     <h4>tw93</h4>
-                    <p>Mole 作者 · <a href="https://tw93.fun" target="_blank">tw93.fun</a></p>
+                    <p>Mole 作者 · <a href="https://tw93.fun" target="_blank">tw93.fun</a> · <a href="https://x.com/HiTw93" target="_blank">𝕏</a></p>
                 </div>
             </div>
             <a href="https://github.com/tw93/Mole" target="_blank" class="github-btn">
