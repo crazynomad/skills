@@ -38,3 +38,15 @@ Or install the media skills group directly:
 ## Structure
 
 Each skill is contained in its own directory with a `SKILL.md` file defining its interface, usage, and dependencies.
+
+## Acknowledgements
+
+These skills stand on the shoulders of giants. We would like to thank the following open-source projects that make these automation tasks possible:
+
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** - The backbone of our video downloading capabilities.
+- **[ImageMagick](https://imagemagick.org/)** - Powering our PDF to image conversion.
+- **[FFmpeg](https://ffmpeg.org/)** - Essential for high-quality audio extraction and video processing.
+- **[Requests](https://requests.readthedocs.io/)** & **[Feedparser](https://github.com/kurtmckee/feedparser)** - Reliable tools for API interaction and RSS parsing.
+- **[Mole](https://github.com/tw93/mole)** - Inspiration and core logic for system cleaning tasks.
+
+We are grateful to the maintainers and contributors of these projects for their dedication to open-source software.
