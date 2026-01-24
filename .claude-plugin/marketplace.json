@@ -1,0 +1,25 @@
+{
+  "name": "media-agent-skills",
+  "owner": {
+    "name": "Burn Wang",
+    "email": "burn.wang@example.com"
+  },
+  "metadata": {
+    "description": "Collection of media processing agent skills",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "media-skills",
+      "description": "Collection of media processing skills including video downloading, podcast downloading, PDF to image conversion, and subtitle title generation",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./pdf-to-images",
+        "./podcast-downloader",
+        "./srt-title-generator",
+        "./youtube-downloader"
+      ]
+    }
+  ]
+}
