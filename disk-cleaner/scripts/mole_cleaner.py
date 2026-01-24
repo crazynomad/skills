@@ -907,23 +907,106 @@ class MoleCleaner:
 
         return result if result else [""]
 
+    # 多语言夸夸语录
+    TW93_PRAISES_I18N = {
+        "zh-Hans": [
+            "tw93 大神出品，必属精品！开源之光，照亮每一个被硬盘空间折磨的灵魂 ✨",
+            "感谢 tw93！你的 Mole 比 Apple 官方的存储管理还好用 1000 倍（不是，是 10000 倍）🚀",
+            "tw93 说：删除缓存，解放空间，拯救钱包。我说：你是开源界的清道夫之王 👑",
+            "当你纠结要不要买更大的 SSD 时，tw93 已经默默为你省下了一个亿（差不多）💰",
+            "Mole 小而美，tw93 大而强！这才叫真正的极客精神，佩服佩服 🙇",
+            "tw93 的代码比鼹鼠挖洞还要高效，比苹果卖 SSD 还要良心 🍎",
+        ],
+        "zh-Hant": [
+            "tw93 大神出品，必屬精品！開源之光，照亮每一個被硬碟空間折磨的靈魂 ✨",
+            "感謝 tw93！你的 Mole 比 Apple 官方的儲存管理還好用 1000 倍（不是，是 10000 倍）🚀",
+            "tw93 說：刪除快取，解放空間，拯救錢包。我說：你是開源界的清道夫之王 👑",
+            "當你糾結要不要買更大的 SSD 時，tw93 已經默默為你省下了一個億（差不多）💰",
+            "Mole 小而美，tw93 大而強！這才叫真正的極客精神，佩服佩服 🙇",
+            "tw93 的程式碼比鼴鼠挖洞還要高效，比蘋果賣 SSD 還要良心 🍎",
+        ],
+        "en": [
+            "Made by tw93, guaranteed quality! A beacon of open source, saving souls tortured by disk space ✨",
+            "Thanks tw93! Your Mole is 1000x better than Apple's storage management (no wait, 10000x) 🚀",
+            "tw93 says: Clear cache, free space, save money. I say: You're the king of open source cleaners 👑",
+            "While you're debating buying a bigger SSD, tw93 has already saved you a fortune 💰",
+            "Mole is small but beautiful, tw93 is mighty! True geek spirit at its finest 🙇",
+            "tw93's code is more efficient than a mole digging tunnels, and more honest than Apple's SSD pricing 🍎",
+        ],
+    }
+
+    # 多语言省钱评语
+    MONEY_COMMENTS_I18N = {
+        "zh-Hans": {
+            100: "一顿火锅钱到手！",
+            50: "省下好几杯奶茶！",
+            20: "够点一份外卖了！",
+            10: "一杯咖啡的钱！",
+            0: "积少成多，聚沙成塔！",
+        },
+        "zh-Hant": {
+            100: "一頓火鍋錢到手！",
+            50: "省下好幾杯奶茶！",
+            20: "夠點一份外賣了！",
+            10: "一杯咖啡的錢！",
+            0: "積少成多，聚沙成塔！",
+        },
+        "en": {
+            100: "That's a nice dinner out!",
+            50: "A few cups of coffee saved!",
+            20: "Enough for a good meal!",
+            10: "A cup of coffee's worth!",
+            0: "Every little bit counts!",
+        },
+    }
+
+    def _get_money_comment_i18n(self, money_saved: float, locale: str) -> str:
+        """获取多语言省钱评语"""
+        comments = self.MONEY_COMMENTS_I18N.get(locale, self.MONEY_COMMENTS_I18N["en"])
+        if money_saved >= 100:
+            return comments[100]
+        elif money_saved >= 50:
+            return comments[50]
+        elif money_saved >= 20:
+            return comments[20]
+        elif money_saved >= 10:
+            return comments[10]
+        else:
+            return comments[0]
+
+    def _get_random_praise_i18n(self, locale: str) -> str:
+        """获取多语言随机夸夸"""
+        praises = self.TW93_PRAISES_I18N.get(locale, self.TW93_PRAISES_I18N["en"])
+        return random.choice(praises)
+
     def generate_achievement_html(self, freed_bytes: int, before_available: str, after_available: str) -> str:
-        """生成 Notion 风格的黑白简约成就页面（紧凑版）"""
+        """生成 Notion 风格的黑白简约成就页面（多语言版）"""
         freed_human = self._format_size(freed_bytes)
-        money_saved, money_comment = self._calculate_money_saved(freed_bytes)
-        praise = self._get_random_praise()
+        money_saved, _ = self._calculate_money_saved(freed_bytes)
         mole_image_base64 = self._get_mole_image_base64()
 
         freed_gb = freed_bytes / (1024 ** 3)
         photos_equivalent = int(freed_gb * 250)
         songs_equivalent = int(freed_gb * 200)
 
+        # 生成各语言的夸夸和评语
+        praise_hans = self._get_random_praise_i18n("zh-Hans")
+        praise_hant = self._get_random_praise_i18n("zh-Hant")
+        praise_en = self._get_random_praise_i18n("en")
+        comment_hans = self._get_money_comment_i18n(money_saved, "zh-Hans")
+        comment_hant = self._get_money_comment_i18n(money_saved, "zh-Hant")
+        comment_en = self._get_money_comment_i18n(money_saved, "en")
+
+        # 转义引号
+        def escape_js(s):
+            return s.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"')
+
         html = f'''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mole · 清理成就</title>
+    <title>Mole · Achievement</title>
     <style>
         :root {{
             --bg: #ffffff;
@@ -966,172 +1049,39 @@ class MoleCleaner:
             to {{ opacity: 1; transform: translateY(0); }}
         }}
 
-        /* Header */
-        .header {{
-            text-align: center;
-            margin-bottom: 24px;
-        }}
-
+        .header {{ text-align: center; margin-bottom: 24px; }}
         .icon {{ font-size: 40px; }}
         .icon img {{ width: 80px; height: auto; }}
+        .title {{ font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }}
 
-        .title {{
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            margin-top: 8px;
-        }}
+        .hero {{ text-align: center; padding: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }}
+        .hero-main {{ font-size: 56px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }}
+        .hero-sub {{ font-size: 20px; color: var(--text-secondary); margin-top: 8px; }}
+        .hero-sub .money {{ font-weight: 600; color: var(--text); }}
+        .hero-quip {{ font-size: 14px; color: var(--text-tertiary); margin-top: 6px; }}
 
-        /* Hero: 释放空间 + 省钱 */
-        .hero {{
-            text-align: center;
-            padding: 28px 0;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-        }}
+        .stats {{ display: flex; border-bottom: 1px solid var(--border); }}
+        .stat {{ flex: 1; text-align: center; padding: 16px 8px; }}
+        .stat:not(:last-child) {{ border-right: 1px solid var(--border); }}
+        .stat .num {{ font-size: 22px; font-weight: 600; }}
+        .stat .label {{ font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }}
 
-        .hero-main {{
-            font-size: 56px;
-            font-weight: 700;
-            letter-spacing: -0.03em;
-            line-height: 1;
-        }}
-
-        .hero-sub {{
-            font-size: 20px;
-            color: var(--text-secondary);
-            margin-top: 8px;
-        }}
-
-        .hero-sub .money {{
-            font-weight: 600;
-            color: var(--text);
-        }}
-
-        .hero-quip {{
-            font-size: 14px;
-            color: var(--text-tertiary);
-            margin-top: 6px;
-        }}
-
-        /* Stats */
-        .stats {{
-            display: flex;
-            border-bottom: 1px solid var(--border);
-        }}
-
-        .stat {{
-            flex: 1;
-            text-align: center;
-            padding: 16px 8px;
-        }}
-
-        .stat:not(:last-child) {{
-            border-right: 1px solid var(--border);
-        }}
-
-        .stat .num {{
-            font-size: 22px;
-            font-weight: 600;
-        }}
-
-        .stat .label {{
-            font-size: 11px;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-top: 2px;
-        }}
-
-        /* Callout */
-        .callout {{
-            background: var(--highlight);
-            border-radius: 4px;
-            padding: 14px 16px;
-            margin: 20px 0;
-            font-size: 14px;
-            color: var(--text-secondary);
-            display: flex;
-            gap: 10px;
-        }}
-
+        .callout {{ background: var(--highlight); border-radius: 4px; padding: 14px 16px; margin: 20px 0; font-size: 14px; color: var(--text-secondary); display: flex; gap: 10px; }}
         .callout-icon {{ flex-shrink: 0; }}
 
-        /* Credits */
-        .credits {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 0;
-            border-bottom: 1px solid var(--border);
-        }}
-
-        .author {{
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }}
-
-        .avatar {{
-            width: 36px;
-            height: 36px;
-            background: var(--accent);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }}
-
-        .author-text h4 {{
-            font-size: 14px;
-            font-weight: 600;
-        }}
-
-        .author-text p {{
-            font-size: 12px;
-            color: var(--text-tertiary);
-        }}
-
-        .author-text a {{
-            color: var(--text-tertiary);
-            text-decoration: underline;
-            text-underline-offset: 2px;
-        }}
-
-        .github-btn {{
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background: var(--accent);
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
-        }}
-
+        .credits {{ display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border); }}
+        .author {{ display: flex; align-items: center; gap: 12px; }}
+        .avatar {{ width: 36px; height: 36px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }}
+        .author-text h4 {{ font-size: 14px; font-weight: 600; }}
+        .author-text p {{ font-size: 12px; color: var(--text-tertiary); }}
+        .author-text a {{ color: var(--text-tertiary); text-decoration: underline; text-underline-offset: 2px; }}
+        .github-btn {{ display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--accent); color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500; }}
         .github-btn:hover {{ opacity: 0.85; }}
-
         .github-btn svg {{ width: 14px; height: 14px; }}
 
-        /* Footer */
-        .footer {{
-            text-align: center;
-            padding-top: 16px;
-            font-size: 12px;
-            color: var(--text-tertiary);
-        }}
+        .footer {{ text-align: center; padding-top: 16px; font-size: 12px; color: var(--text-tertiary); }}
+        .footer-mole {{ width: 120px; height: auto; margin-bottom: 12px; opacity: 0.9; }}
 
-        .footer-mole {{
-            width: 120px;
-            height: auto;
-            margin-bottom: 12px;
-            opacity: 0.9;
-        }}
-
-        /* Mobile */
         @media (max-width: 480px) {{
             body {{ padding: 16px; }}
             .hero-main {{ font-size: 44px; }}
@@ -1155,33 +1105,33 @@ class MoleCleaner:
     <div class="page">
         <header class="header">
             <div class="icon">{'<img src="data:image/jpeg;base64,' + mole_image_base64 + '" alt="Mole">' if mole_image_base64 else '🦔'}</div>
-            <h1 class="title">清理完成</h1>
+            <h1 class="title" data-i18n="title"></h1>
         </header>
 
         <section class="hero">
             <div class="hero-main">{freed_human}</div>
-            <div class="hero-sub">相当于省了 <span class="money">¥{money_saved:.2f}</span></div>
-            <div class="hero-quip">{money_comment}</div>
+            <div class="hero-sub"><span data-i18n="saved_prefix"></span> <span class="money">¥{money_saved:.2f}</span></div>
+            <div class="hero-quip" data-i18n="quip"></div>
         </section>
 
         <section class="stats">
             <div class="stat">
                 <div class="num">{photos_equivalent:,}</div>
-                <div class="label">张照片</div>
+                <div class="label" data-i18n="photos"></div>
             </div>
             <div class="stat">
                 <div class="num">{songs_equivalent:,}</div>
-                <div class="label">首歌曲</div>
+                <div class="label" data-i18n="songs"></div>
             </div>
             <div class="stat">
                 <div class="num">¥3k/T</div>
-                <div class="label">SSD 价格</div>
+                <div class="label" data-i18n="ssd_price"></div>
             </div>
         </section>
 
         <div class="callout">
             <span class="callout-icon">💬</span>
-            <span>{praise}</span>
+            <span data-i18n="praise"></span>
         </div>
 
         <section class="credits">
@@ -1189,7 +1139,7 @@ class MoleCleaner:
                 <div class="avatar">🦔</div>
                 <div class="author-text">
                     <h4>tw93</h4>
-                    <p>Mole 作者 · <a href="https://tw93.fun" target="_blank">tw93.fun</a> · <a href="https://x.com/HiTw93" target="_blank">𝕏</a></p>
+                    <p><span data-i18n="author_desc"></span> · <a href="https://tw93.fun" target="_blank">tw93.fun</a> · <a href="https://x.com/HiTw93" target="_blank">𝕏</a></p>
                 </div>
             </div>
             <a href="https://github.com/tw93/Mole" target="_blank" class="github-btn">
@@ -1200,9 +1150,80 @@ class MoleCleaner:
 
         <footer class="footer">
             {'<img src="data:image/jpeg;base64,' + mole_image_base64 + '" alt="Mole" class="footer-mole">' if mole_image_base64 else ''}
-            <div>感谢开源，感谢 tw93</div>
+            <div data-i18n="thanks"></div>
         </footer>
     </div>
+
+    <script>
+    (function() {{
+        const i18n = {{
+            'zh-Hans': {{
+                title: '清理完成',
+                saved_prefix: '相当于省了',
+                quip: '{escape_js(comment_hans)}',
+                photos: '张照片',
+                songs: '首歌曲',
+                ssd_price: 'SSD 价格',
+                praise: '{escape_js(praise_hans)}',
+                author_desc: 'Mole 作者',
+                thanks: '感谢开源，感谢 tw93'
+            }},
+            'zh-Hant': {{
+                title: '清理完成',
+                saved_prefix: '相當於省了',
+                quip: '{escape_js(comment_hant)}',
+                photos: '張照片',
+                songs: '首歌曲',
+                ssd_price: 'SSD 價格',
+                praise: '{escape_js(praise_hant)}',
+                author_desc: 'Mole 作者',
+                thanks: '感謝開源，感謝 tw93'
+            }},
+            'en': {{
+                title: 'Cleanup Complete',
+                saved_prefix: 'Equivalent to saving',
+                quip: '{escape_js(comment_en)}',
+                photos: 'PHOTOS',
+                songs: 'SONGS',
+                ssd_price: 'SSD PRICE',
+                praise: '{escape_js(praise_en)}',
+                author_desc: 'Mole Author',
+                thanks: 'Thanks to open source, thanks to tw93'
+            }}
+        }};
+
+        function detectLocale() {{
+            const lang = navigator.language || navigator.userLanguage || 'en';
+            const langLower = lang.toLowerCase();
+
+            // 简体中文: zh-cn, zh-hans, zh-sg
+            if (langLower.startsWith('zh-cn') || langLower.startsWith('zh-hans') || langLower.startsWith('zh-sg')) {{
+                return 'zh-Hans';
+            }}
+            // 繁体中文: zh-tw, zh-hk, zh-hant, zh-mo
+            if (langLower.startsWith('zh-tw') || langLower.startsWith('zh-hk') ||
+                langLower.startsWith('zh-hant') || langLower.startsWith('zh-mo') ||
+                langLower === 'zh') {{
+                return 'zh-Hant';
+            }}
+            // 其他都用英文
+            return 'en';
+        }}
+
+        function applyLocale(locale) {{
+            const texts = i18n[locale] || i18n['en'];
+            document.querySelectorAll('[data-i18n]').forEach(el => {{
+                const key = el.getAttribute('data-i18n');
+                if (texts[key]) {{
+                    el.textContent = texts[key];
+                }}
+            }});
+            document.documentElement.lang = locale === 'zh-Hans' ? 'zh-CN' : (locale === 'zh-Hant' ? 'zh-TW' : 'en');
+        }}
+
+        applyLocale(detectLocale());
+    }})();
+    </script>
 </body>
 </html>'''
         return html
