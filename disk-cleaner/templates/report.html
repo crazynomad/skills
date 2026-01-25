@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mole · Disk Report</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #37352f;
+            --text-secondary: #6b6b6b;
+            --text-tertiary: #9b9a97;
+            --border: #e3e2e0;
+            --highlight: #f7f6f3;
+            --accent: #000000;
+            --green: #0f7b6c;
+            --yellow: #dfab01;
+            --red: #e03e3e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-icon {
+            font-size: 48px;
+        }
+
+        .header-icon img {
+            width: 64px;
+            height: auto;
+        }
+
+        .header-text h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .header-text p {
+            font-size: 14px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+
+        /* Disk Status */
+        .disk-status {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .disk-card {
+            background: var(--highlight);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .disk-card .value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .disk-card .label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Categories */
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: var(--highlight);
+            border-radius: 8px;
+            transition: transform 0.15s ease;
+        }
+
+        .category-item:hover {
+            transform: translateX(4px);
+        }
+
+        .category-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .category-icon {
+            font-size: 24px;
+            width: 40px;
+            text-align: center;
+        }
+
+        .category-text h3 {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .category-text p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .category-size {
+            text-align: right;
+        }
+
+        .category-size .size {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .category-size .badge {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+
+        .badge-safe {
+            background: rgba(15, 123, 108, 0.1);
+            color: var(--green);
+        }
+
+        .badge-caution {
+            background: rgba(223, 171, 1, 0.1);
+            color: var(--yellow);
+        }
+
+        /* Tiers */
+        .tier-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tier-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .tier-item.recommended {
+            border-color: var(--accent);
+            background: var(--highlight);
+        }
+
+        .tier-info h3 {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tier-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .tier-size {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .tag {
+            font-size: 10px;
+            background: var(--accent);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Summary */
+        .summary {
+            background: var(--accent);
+            color: white;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .summary-value {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .summary-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        /* Protected */
+        .protected-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .protected-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            padding: 6px 12px;
+            background: var(--highlight);
+            border-radius: 20px;
+            color: var(--text-secondary);
+        }
+
+        /* Warnings */
+        .warning-box {
+            background: rgba(223, 171, 1, 0.1);
+            border-left: 3px solid var(--yellow);
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .footer a {
+            color: var(--text-secondary);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body { padding: 20px 16px; }
+            .disk-status { grid-template-columns: 1fr; }
+            .header { flex-direction: column; text-align: center; }
+            .category-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .category-size { text-align: left; }
+            .tier-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-icon">
+                {%- if mole_image_base64 %}
+                <img src="data:image/jpeg;base64,{{ mole_image_base64 }}" alt="Mole">
+                {%- else %}
+                🦔
+                {%- endif %}
+            </div>
+            <div class="header-text">
+                <h1>磁盘清理分析报告</h1>
+                <p>扫描时间：{{ scan_time }}</p>
+            </div>
+        </header>
+
+        <!-- Disk Status -->
+        <div class="disk-status">
+            <div class="disk-card">
+                <div class="value">{{ disk_total }}</div>
+                <div class="label">总容量</div>
+            </div>
+            <div class="disk-card">
+                <div class="value">{{ disk_used }}</div>
+                <div class="label">已使用</div>
+            </div>
+            <div class="disk-card">
+                <div class="value">{{ disk_available }}</div>
+                <div class="label">可用空间</div>
+            </div>
+        </div>
+
+        {%- if warnings %}
+        <div class="warning-box">
+            ⚠️
+            {%- for warning in warnings %}
+            {{ warning }}{% if not loop.last %}<br>{% endif %}
+            {%- endfor %}
+        </div>
+        {%- endif %}
+
+        <!-- Summary -->
+        <div class="summary">
+            <div class="summary-value">{{ total_size }}</div>
+            <div class="summary-label">预计可释放空间</div>
+        </div>
+
+        <!-- Categories -->
+        <section class="section" style="margin-top: 32px;">
+            <h2 class="section-title">📊 可清理项目</h2>
+            <div class="category-list">
+                {%- for cat in categories %}
+                <div class="category-item">
+                    <div class="category-info">
+                        <span class="category-icon">{{ cat.icon }}</span>
+                        <div class="category-text">
+                            <h3>{{ cat.name }}</h3>
+                            <p>{{ cat.description }}</p>
+                        </div>
+                    </div>
+                    <div class="category-size">
+                        <div class="size">{{ cat.size }}</div>
+                        <span class="badge badge-{{ cat.advice_type }}">{{ cat.advice_text }}</span>
+                    </div>
+                </div>
+                {%- endfor %}
+            </div>
+        </section>
+
+        <!-- Tiers -->
+        <section class="section">
+            <h2 class="section-title">🧭 清理策略建议</h2>
+            <div class="tier-list">
+                <div class="tier-item">
+                    <div class="tier-info">
+                        <h3>🟢 低风险</h3>
+                        <p>仅清理可快速重建的缓存，体验影响最小</p>
+                    </div>
+                    <div class="tier-size">{{ tier_low_risk }}</div>
+                </div>
+                <div class="tier-item recommended">
+                    <div class="tier-info">
+                        <h3>🟡 默认 <span class="tag">推荐</span></h3>
+                        <p>在低风险基础上谨慎扩展，适合多数用户</p>
+                    </div>
+                    <div class="tier-size">{{ tier_default }}</div>
+                </div>
+                <div class="tier-item">
+                    <div class="tier-info">
+                        <h3>🔴 最大拯救</h3>
+                        <p>包含可能影响使用体验的缓存，建议先备份</p>
+                    </div>
+                    <div class="tier-size">{{ tier_maximum }}</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Protected -->
+        {%- if protected_items %}
+        <section class="section">
+            <h2 class="section-title">🔒 已保护项目（不会清理）</h2>
+            <div class="protected-list">
+                {%- for item in protected_items %}
+                <span class="protected-item">🛡️ {{ item }}</span>
+                {%- endfor %}
+            </div>
+        </section>
+        {%- endif %}
+
+        <footer class="footer">
+            <p>由 <a href="https://github.com/tw93/Mole" target="_blank">Mole</a> 提供支持 · 作者 <a href="https://tw93.fun" target="_blank">tw93</a></p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -690,6 +690,69 @@ class MoleCleaner:
 
         return "\n".join(lines)
 
+    def generate_report_html(self, report: CleanReport) -> str:
+        """生成 HTML 格式的扫描报告"""
+        mole_image_base64 = self._get_mole_image_base64()
+
+        # 按大小排序分类
+        sorted_categories = sorted(
+            report.categories.items(),
+            key=lambda x: x[1]["size_bytes"],
+            reverse=True
+        )
+
+        # 构建分类数据
+        categories_data = []
+        for category, data in sorted_categories:
+            advice_type, advice_text = self.CATEGORY_ADVICE.get(category, ("info", "请根据需求决定"))
+            categories_data.append({
+                "name": category,
+                "icon": self.CATEGORY_ICONS.get(category, "📄"),
+                "description": data["description"],
+                "size": self._format_size(data["size_bytes"]),
+                "advice_type": advice_type,
+                "advice_text": advice_text,
+            })
+
+        return self._render_template(
+            "report.html",
+            scan_time=report.scan_time,
+            disk_total=report.disk_total,
+            disk_used=report.disk_used,
+            disk_available=report.disk_available_before,
+            total_size=report.total_size_human,
+            warnings=report.warnings,
+            categories=categories_data,
+            tier_low_risk=report.tier_estimates.get("low_risk", "0 B"),
+            tier_default=report.tier_estimates.get("default", "0 B"),
+            tier_maximum=report.tier_estimates.get("maximum", "0 B"),
+            protected_items=report.protected_items,
+            mole_image_base64=mole_image_base64,
+        )
+
+    def save_and_open_report(self, report: CleanReport) -> Optional[str]:
+        """保存 HTML 报告并在浏览器中打开"""
+        html_content = self.generate_report_html(report)
+
+        try:
+            report_dir = os.path.expanduser("~/.config/mole-cleaner/reports")
+            os.makedirs(report_dir, exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            filename = f"report-{timestamp}.html"
+            filepath = os.path.join(report_dir, filename)
+
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(html_content)
+
+            import webbrowser
+            webbrowser.open(f"file://{filepath}")
+
+            return filepath
+        except Exception as e:
+            print(f"⚠️  无法保存报告: {e}")
+            return None
+
     def run_clean(self, open_achievement: bool = True) -> bool:
         """执行清理"""
         if not self.mole_path:
@@ -1103,6 +1166,7 @@ def main():
 示例:
   %(prog)s --check              # 检查环境
   %(prog)s --preview            # 预览清理内容
+  %(prog)s --preview --html     # HTML 格式报告（自动打开浏览器）
   %(prog)s --clean              # 执行清理
   %(prog)s --status             # 查看磁盘状态
   %(prog)s --preview --json     # JSON 格式输出
@@ -1115,6 +1179,7 @@ def main():
     parser.add_argument("--status", action="store_true", help="显示磁盘状态")
     parser.add_argument("--auto-install", action="store_true", help="自动安装缺失依赖")
     parser.add_argument("--json", action="store_true", help="JSON 格式输出")
+    parser.add_argument("--html", action="store_true", help="HTML 格式报告（自动打开浏览器）")
     parser.add_argument("--no-sample-data", action="store_true", help="禁用解析失败时的示例数据")
     parser.add_argument("--save-report", action="store_true", help="保存报告到默认路径")
     parser.add_argument("--confirm", action="store_true", help="清理前进行二次确认（非交互）")
@@ -1174,6 +1239,14 @@ def main():
     if args.preview:
         report = cleaner.run_dry_run(allow_sample_data=not args.no_sample_data)
         if report:
+            # HTML 输出
+            if args.html:
+                html_path = cleaner.save_and_open_report(report)
+                if html_path:
+                    print(f"🌐 HTML 报告已打开: {html_path}")
+                return
+
+            # 文本/JSON 输出
             output = cleaner.generate_report(report, use_json=args.json)
             print(output)
 

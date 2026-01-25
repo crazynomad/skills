@@ -39,8 +39,9 @@ python scripts/mole_cleaner.py --check
 ### 预览清理内容
 
 ```bash
-python scripts/mole_cleaner.py --preview
-python scripts/mole_cleaner.py --preview --json  # JSON 格式输出
+python scripts/mole_cleaner.py --preview          # 终端文本报告
+python scripts/mole_cleaner.py --preview --html   # HTML 报告（自动打开浏览器）
+python scripts/mole_cleaner.py --preview --json   # JSON 格式输出
 ```
 
 ### 执行清理
