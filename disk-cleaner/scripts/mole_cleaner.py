@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
+from jinja2 import Environment, FileSystemLoader
+
 
 @dataclass
 class CleanableItem:
@@ -979,6 +981,19 @@ class MoleCleaner:
         praises = self.TW93_PRAISES_I18N.get(locale, self.TW93_PRAISES_I18N["en"])
         return random.choice(praises)
 
+    def _get_template_dir(self) -> str:
+        """获取模板目录路径"""
+        return os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
+
+    def _render_template(self, template_name: str, **context) -> str:
+        """使用 Jinja2 渲染模板"""
+        env = Environment(
+            loader=FileSystemLoader(self._get_template_dir()),
+            autoescape=False  # HTML 模板，不自动转义
+        )
+        template = env.get_template(template_name)
+        return template.render(**context)
+
     def generate_achievement_html(self, freed_bytes: int, before_available: str, after_available: str) -> str:
         """生成 Notion 风格的黑白简约成就页面（多语言版）"""
         freed_human = self._format_size(freed_bytes)
@@ -986,8 +1001,8 @@ class MoleCleaner:
         mole_image_base64 = self._get_mole_image_base64()
 
         freed_gb = freed_bytes / (1024 ** 3)
-        photos_equivalent = int(freed_gb * 250)
-        songs_equivalent = int(freed_gb * 200)
+        photos_equivalent = f"{int(freed_gb * 250):,}"
+        songs_equivalent = f"{int(freed_gb * 200):,}"
 
         # 货币转换 (7 RMB ≈ 1 USD)
         money_saved_usd = money_saved / 7
@@ -997,256 +1012,62 @@ class MoleCleaner:
         praise_hant = self._get_random_praise_i18n("zh-Hant")
         praise_en = self._get_random_praise_i18n("en")
         comment_hans = self._get_money_comment_i18n(money_saved, "zh-Hans")
-        comment_hant = self._get_money_comment_i18n(money_saved_usd * 7, "zh-Hant")  # 用等值判断
+        comment_hant = self._get_money_comment_i18n(money_saved_usd * 7, "zh-Hant")
         comment_en = self._get_money_comment_i18n(money_saved_usd * 7, "en")
 
-        # 转义引号
-        def escape_js(s):
-            return s.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"')
+        # 构建 i18n 数据（JSON 格式，供 JavaScript 使用）
+        i18n_data = json.dumps({
+            'zh-Hans': {
+                'title': '清理完成',
+                'saved_prefix': '相当于省了',
+                'quip': comment_hans,
+                'photos': '张照片',
+                'songs': '首歌曲',
+                'ssd_price': 'SSD 价格',
+                'ssd_price_value': '¥3k/T',
+                'praise': praise_hans,
+                'author_desc': 'Mole 作者',
+                'thanks': '感谢开源，感谢 tw93',
+                'currency': 'rmb'
+            },
+            'zh-Hant': {
+                'title': '清理完成',
+                'saved_prefix': '相當於省了',
+                'quip': comment_hant,
+                'photos': '張照片',
+                'songs': '首歌曲',
+                'ssd_price': 'SSD 價格',
+                'ssd_price_value': '$430/T',
+                'praise': praise_hant,
+                'author_desc': 'Mole 作者',
+                'thanks': '感謝開源，感謝 tw93',
+                'currency': 'usd'
+            },
+            'en': {
+                'title': 'Cleanup Complete',
+                'saved_prefix': 'Equivalent to saving',
+                'quip': comment_en,
+                'photos': 'PHOTOS',
+                'songs': 'SONGS',
+                'ssd_price': 'SSD PRICE',
+                'ssd_price_value': '$430/T',
+                'praise': praise_en,
+                'author_desc': 'Mole Author',
+                'thanks': 'Thanks to open source, thanks to tw93',
+                'currency': 'usd'
+            }
+        }, ensure_ascii=False)
 
-        html = f'''<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mole · Achievement</title>
-    <style>
-        :root {{
-            --bg: #ffffff;
-            --text: #37352f;
-            --text-secondary: #6b6b6b;
-            --text-tertiary: #9b9a97;
-            --border: #e3e2e0;
-            --highlight: #f7f6f3;
-            --accent: #000000;
-        }}
-
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-
-        html, body {{
-            height: 100%;
-            overflow: hidden;
-        }}
-
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        }}
-
-        .page {{
-            width: 100%;
-            max-width: 480px;
-            animation: fadeIn 0.4s ease-out;
-        }}
-
-        @keyframes fadeIn {{
-            from {{ opacity: 0; transform: translateY(8px); }}
-            to {{ opacity: 1; transform: translateY(0); }}
-        }}
-
-        .header {{ text-align: center; margin-bottom: 24px; }}
-        .icon {{ font-size: 40px; }}
-        .icon img {{ width: 80px; height: auto; }}
-        .title {{ font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }}
-
-        .hero {{ text-align: center; padding: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }}
-        .hero-main {{ font-size: 56px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }}
-        .hero-sub {{ font-size: 20px; color: var(--text-secondary); margin-top: 8px; }}
-        .hero-sub .money {{ font-weight: 600; color: var(--text); }}
-        .hero-quip {{ font-size: 14px; color: var(--text-tertiary); margin-top: 6px; }}
-
-        .stats {{ display: flex; border-bottom: 1px solid var(--border); }}
-        .stat {{ flex: 1; text-align: center; padding: 16px 8px; }}
-        .stat:not(:last-child) {{ border-right: 1px solid var(--border); }}
-        .stat .num {{ font-size: 22px; font-weight: 600; }}
-        .stat .label {{ font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }}
-
-        .callout {{ background: var(--highlight); border-radius: 4px; padding: 14px 16px; margin: 20px 0; font-size: 14px; color: var(--text-secondary); display: flex; gap: 10px; }}
-        .callout-icon {{ flex-shrink: 0; }}
-
-        .credits {{ display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border); }}
-        .author {{ display: flex; align-items: center; gap: 12px; }}
-        .avatar {{ width: 36px; height: 36px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }}
-        .author-text h4 {{ font-size: 14px; font-weight: 600; }}
-        .author-text p {{ font-size: 12px; color: var(--text-tertiary); }}
-        .author-text a {{ color: var(--text-tertiary); text-decoration: underline; text-underline-offset: 2px; }}
-        .github-btn {{ display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--accent); color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500; }}
-        .github-btn:hover {{ opacity: 0.85; }}
-        .github-btn svg {{ width: 14px; height: 14px; }}
-
-        .footer {{ text-align: center; padding-top: 16px; font-size: 12px; color: var(--text-tertiary); }}
-        .footer-mole {{ width: 120px; height: auto; margin-bottom: 12px; opacity: 0.9; }}
-
-        @media (max-width: 480px) {{
-            body {{ padding: 16px; }}
-            .hero-main {{ font-size: 44px; }}
-            .hero-sub {{ font-size: 16px; }}
-            .title {{ font-size: 24px; }}
-            .stat .num {{ font-size: 18px; }}
-            .credits {{ flex-direction: column; gap: 12px; }}
-        }}
-
-        @media (max-height: 700px) {{
-            .header {{ margin-bottom: 16px; }}
-            .hero {{ padding: 20px 0; }}
-            .hero-main {{ font-size: 44px; }}
-            .callout {{ margin: 14px 0; padding: 10px 14px; }}
-            .credits {{ padding: 12px 0; }}
-            .footer {{ padding-top: 12px; }}
-        }}
-    </style>
-</head>
-<body>
-    <div class="page">
-        <header class="header">
-            <div class="icon">{'<img src="data:image/jpeg;base64,' + mole_image_base64 + '" alt="Mole">' if mole_image_base64 else '🦔'}</div>
-            <h1 class="title" data-i18n="title"></h1>
-        </header>
-
-        <section class="hero">
-            <div class="hero-main">{freed_human}</div>
-            <div class="hero-sub"><span data-i18n="saved_prefix"></span> <span class="money" data-rmb="{money_saved:.2f}" data-usd="{money_saved_usd:.2f}"></span></div>
-            <div class="hero-quip" data-i18n="quip"></div>
-        </section>
-
-        <section class="stats">
-            <div class="stat">
-                <div class="num">{photos_equivalent:,}</div>
-                <div class="label" data-i18n="photos"></div>
-            </div>
-            <div class="stat">
-                <div class="num">{songs_equivalent:,}</div>
-                <div class="label" data-i18n="songs"></div>
-            </div>
-            <div class="stat">
-                <div class="num" data-i18n="ssd_price_value"></div>
-                <div class="label" data-i18n="ssd_price"></div>
-            </div>
-        </section>
-
-        <div class="callout">
-            <span class="callout-icon">💬</span>
-            <span data-i18n="praise"></span>
-        </div>
-
-        <section class="credits">
-            <div class="author">
-                <div class="avatar">🦔</div>
-                <div class="author-text">
-                    <h4>tw93</h4>
-                    <p><span data-i18n="author_desc"></span> · <a href="https://tw93.fun" target="_blank">tw93.fun</a> · <a href="https://x.com/HiTw93" target="_blank">𝕏</a></p>
-                </div>
-            </div>
-            <a href="https://github.com/tw93/Mole" target="_blank" class="github-btn">
-                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-                Star
-            </a>
-        </section>
-
-        <footer class="footer">
-            {'<img src="data:image/jpeg;base64,' + mole_image_base64 + '" alt="Mole" class="footer-mole">' if mole_image_base64 else ''}
-            <div data-i18n="thanks"></div>
-        </footer>
-    </div>
-
-    <script>
-    (function() {{
-        const i18n = {{
-            'zh-Hans': {{
-                title: '清理完成',
-                saved_prefix: '相当于省了',
-                quip: '{escape_js(comment_hans)}',
-                photos: '张照片',
-                songs: '首歌曲',
-                ssd_price: 'SSD 价格',
-                ssd_price_value: '¥3k/T',
-                praise: '{escape_js(praise_hans)}',
-                author_desc: 'Mole 作者',
-                thanks: '感谢开源，感谢 tw93',
-                currency: 'rmb'
-            }},
-            'zh-Hant': {{
-                title: '清理完成',
-                saved_prefix: '相當於省了',
-                quip: '{escape_js(comment_hant)}',
-                photos: '張照片',
-                songs: '首歌曲',
-                ssd_price: 'SSD 價格',
-                ssd_price_value: '$430/T',
-                praise: '{escape_js(praise_hant)}',
-                author_desc: 'Mole 作者',
-                thanks: '感謝開源，感謝 tw93',
-                currency: 'usd'
-            }},
-            'en': {{
-                title: 'Cleanup Complete',
-                saved_prefix: 'Equivalent to saving',
-                quip: '{escape_js(comment_en)}',
-                photos: 'PHOTOS',
-                songs: 'SONGS',
-                ssd_price: 'SSD PRICE',
-                ssd_price_value: '$430/T',
-                praise: '{escape_js(praise_en)}',
-                author_desc: 'Mole Author',
-                thanks: 'Thanks to open source, thanks to tw93',
-                currency: 'usd'
-            }}
-        }};
-
-        function detectLocale() {{
-            const lang = navigator.language || navigator.userLanguage || 'en';
-            const langLower = lang.toLowerCase();
-
-            // 简体中文: zh-cn, zh-hans, zh-sg
-            if (langLower.startsWith('zh-cn') || langLower.startsWith('zh-hans') || langLower.startsWith('zh-sg')) {{
-                return 'zh-Hans';
-            }}
-            // 繁体中文: zh-tw, zh-hk, zh-hant, zh-mo
-            if (langLower.startsWith('zh-tw') || langLower.startsWith('zh-hk') ||
-                langLower.startsWith('zh-hant') || langLower.startsWith('zh-mo') ||
-                langLower === 'zh') {{
-                return 'zh-Hant';
-            }}
-            // 其他都用英文
-            return 'en';
-        }}
-
-        function applyLocale(locale) {{
-            const texts = i18n[locale] || i18n['en'];
-            document.querySelectorAll('[data-i18n]').forEach(el => {{
-                const key = el.getAttribute('data-i18n');
-                if (texts[key]) {{
-                    el.textContent = texts[key];
-                }}
-            }});
-
-            // 处理货币显示
-            const moneyEl = document.querySelector('.money');
-            if (moneyEl) {{
-                if (texts.currency === 'rmb') {{
-                    moneyEl.textContent = '¥' + moneyEl.dataset.rmb;
-                }} else {{
-                    moneyEl.textContent = '$' + moneyEl.dataset.usd;
-                }}
-            }}
-
-            document.documentElement.lang = locale === 'zh-Hans' ? 'zh-CN' : (locale === 'zh-Hant' ? 'zh-TW' : 'en');
-        }}
-
-        applyLocale(detectLocale());
-    }})();
-    </script>
-</body>
-</html>'''
-        return html
+        return self._render_template(
+            "achievement.html",
+            freed_human=freed_human,
+            money_saved_rmb=f"{money_saved:.2f}",
+            money_saved_usd=f"{money_saved_usd:.2f}",
+            photos_equivalent=photos_equivalent,
+            songs_equivalent=songs_equivalent,
+            mole_image_base64=mole_image_base64,
+            i18n_data=i18n_data
+        )
 
     def save_and_open_achievement(self, freed_bytes: int, before_available: str, after_available: str) -> Optional[str]:
         """保存成就页并在浏览器中打开"""

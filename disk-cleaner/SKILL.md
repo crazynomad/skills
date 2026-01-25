@@ -90,6 +90,7 @@ python scripts/mole_cleaner.py --show-achievement
 - macOS
 - Homebrew
 - Mole (`brew install tw93/tap/mole`)
+- Python: `pip install jinja2`
 
 ## Credits
 
