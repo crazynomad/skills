@@ -2,7 +2,7 @@
 """
 File Organizer - Mac 智能文件整理助手
 
-支持上班族/码农两种模板，手动/自动两种整理模式。
+专注于整理下载文件夹中的办公文档，避免误移动代码文件。
 与 disk-cleaner 配合，保护重要文件不被清理。
 """
 
@@ -11,13 +11,10 @@ import json
 import os
 import plistlib
 import shutil
-import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
-
-from jinja2 import Environment, FileSystemLoader
 
 
 @dataclass
@@ -27,24 +24,15 @@ class FileCategory:
     icon: str
     extensions: list[str]
     description: str
-    min_size_bytes: int = 0  # 最小文件大小（用于智能文件夹）
-
-
-@dataclass
-class Template:
-    """用户模板定义"""
-    name: str
-    display_name: str
-    description: str
-    categories: list[FileCategory]
+    min_size_bytes: int = 0
 
 
 @dataclass
 class OrganizeResult:
     """整理结果"""
-    template: str
     mode: str
     scan_time: str
+    scope: str = ""
     total_files: int = 0
     total_size_bytes: int = 0
     categories: dict = field(default_factory=dict)
@@ -73,120 +61,102 @@ class FileOrganizer:
     CONFIG_DIR = HOME / ".config" / "file-organizer"
     MOLE_WHITELIST = HOME / ".config" / "mole" / "whitelist.txt"
 
-    # 模板定义
-    TEMPLATES = {
-        "office-worker": Template(
-            name="office-worker",
-            display_name="上班族",
-            description="关注办公文档、演示文稿、表格、PDF",
-            categories=[
-                FileCategory(
-                    name="演示文稿",
-                    icon="📊",
-                    extensions=[".ppt", ".pptx", ".key"],
-                    description="PPT/Keynote 演示文稿",
-                ),
-                FileCategory(
-                    name="文档",
-                    icon="📝",
-                    extensions=[".doc", ".docx", ".pages", ".rtf"],
-                    description="Word/Pages 文档",
-                ),
-                FileCategory(
-                    name="表格",
-                    icon="📈",
-                    extensions=[".xls", ".xlsx", ".numbers", ".csv"],
-                    description="Excel/Numbers 表格",
-                ),
-                FileCategory(
-                    name="PDF",
-                    icon="📄",
-                    extensions=[".pdf"],
-                    description="PDF 文件",
-                    min_size_bytes=1024 * 1024,  # 1MB
-                ),
-                FileCategory(
-                    name="图片",
-                    icon="🖼️",
-                    extensions=[".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"],
-                    description="图片文件",
-                ),
-            ],
+    # 文件分类（专注办公文档，避免误移动代码）
+    FILE_CATEGORIES = [
+        FileCategory(
+            name="演示文稿",
+            icon="📊",
+            extensions=[".ppt", ".pptx", ".key", ".odp"],
+            description="PPT/Keynote 演示文稿",
         ),
-        "developer": Template(
-            name="developer",
-            display_name="码农",
-            description="关注代码、配置文件、Markdown 文档",
-            categories=[
-                FileCategory(
-                    name="代码",
-                    icon="💻",
-                    extensions=[
-                        ".py", ".js", ".ts", ".jsx", ".tsx",
-                        ".go", ".rs", ".java", ".swift", ".kt",
-                        ".c", ".cpp", ".h", ".hpp",
-                        ".rb", ".php", ".sh", ".bash",
-                    ],
-                    description="源代码文件",
-                ),
-                FileCategory(
-                    name="配置",
-                    icon="⚙️",
-                    extensions=[
-                        ".json", ".yaml", ".yml", ".toml",
-                        ".env", ".ini", ".cfg", ".conf",
-                    ],
-                    description="配置文件",
-                ),
-                FileCategory(
-                    name="文档",
-                    icon="📝",
-                    extensions=[".md", ".markdown", ".txt", ".rst"],
-                    description="Markdown/文本文档",
-                ),
-                FileCategory(
-                    name="数据",
-                    icon="🗃️",
-                    extensions=[".db", ".sqlite", ".sqlite3", ".sql"],
-                    description="数据库文件",
-                ),
-                FileCategory(
-                    name="密钥",
-                    icon="🔑",
-                    extensions=[".pem", ".key", ".crt", ".cer", ".p12"],
-                    description="密钥/证书文件",
-                ),
-            ],
+        FileCategory(
+            name="文档",
+            icon="📝",
+            extensions=[".doc", ".docx", ".pages", ".rtf", ".odt"],
+            description="Word/Pages 文档",
         ),
-    }
-
-    # 通用分类（下载、截图、大文件）
-    COMMON_CATEGORIES = {
-        "downloads": FileCategory(
-            name="下载文件",
-            icon="📥",
-            extensions=[],  # 所有文件
-            description="Downloads 文件夹中的文件",
+        FileCategory(
+            name="表格",
+            icon="📈",
+            extensions=[".xls", ".xlsx", ".numbers", ".csv", ".ods"],
+            description="Excel/Numbers 表格",
         ),
-        "screenshots": FileCategory(
-            name="截图",
-            icon="📸",
-            extensions=[".png", ".jpg", ".jpeg"],
-            description="屏幕截图文件",
+        FileCategory(
+            name="PDF",
+            icon="📄",
+            extensions=[".pdf"],
+            description="PDF 文件",
         ),
-        "archives": FileCategory(
+        FileCategory(
+            name="图片",
+            icon="🖼️",
+            extensions=[".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".bmp", ".tiff"],
+            description="图片文件",
+        ),
+        FileCategory(
+            name="视频",
+            icon="🎬",
+            extensions=[".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".m4v"],
+            description="视频文件",
+        ),
+        FileCategory(
+            name="音频",
+            icon="🎵",
+            extensions=[".mp3", ".wav", ".flac", ".aac", ".m4a", ".ogg", ".wma"],
+            description="音频文件",
+        ),
+        FileCategory(
             name="压缩包",
             icon="📦",
-            extensions=[".zip", ".rar", ".7z", ".tar", ".gz", ".dmg"],
-            description="压缩包和磁盘镜像",
+            extensions=[".zip", ".rar", ".7z", ".tar", ".gz", ".dmg", ".pkg"],
+            description="压缩包和安装包",
         ),
-        "large_files": FileCategory(
-            name="大文件",
-            icon="💾",
-            extensions=[],  # 所有文件
-            description="占用空间的大文件",
-            min_size_bytes=100 * 1024 * 1024,  # 100MB
+        FileCategory(
+            name="电子书",
+            icon="📚",
+            extensions=[".epub", ".mobi", ".azw3", ".djvu"],
+            description="电子书文件",
         ),
+    ]
+
+    # 大文件只显示这些明确用途的扩展名
+    LARGE_FILE_EXTENSIONS = {
+        # 文档
+        ".pdf", ".ppt", ".pptx", ".key", ".doc", ".docx",
+        ".xls", ".xlsx", ".pages", ".numbers",
+        # 媒体
+        ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".m4v",
+        ".mp3", ".wav", ".flac", ".aac", ".m4a",
+        # 图片
+        ".jpg", ".jpeg", ".png", ".gif", ".heic", ".psd", ".ai",
+        # 压缩包
+        ".zip", ".rar", ".7z", ".dmg", ".pkg", ".iso",
+        # 电子书
+        ".epub", ".mobi", ".azw3",
+    }
+
+    # 排除的目录（类似 Mole 白名单机制）
+    EXCLUDED_DIRS = {
+        # 系统/隐藏目录
+        ".git", ".svn", ".hg",
+        ".cache", ".npm", ".yarn", ".pnpm",
+        ".venv", "venv", "env", ".env",
+        "__pycache__", ".pytest_cache",
+        "node_modules", "vendor", "packages",
+        # macOS 系统
+        "Library", ".Trash",
+        # IDE/编辑器
+        ".idea", ".vscode", ".vs",
+        # 构建产物
+        "build", "dist", "target", "out",
+        "DerivedData", "Pods",
+    }
+
+    # 排除的文件模式
+    EXCLUDED_PATTERNS = {
+        ".DS_Store", "Thumbs.db", ".localized",
+        "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
+        "Cargo.lock", "Gemfile.lock", "poetry.lock",
     }
 
     def __init__(self):
@@ -215,28 +185,43 @@ class FileOrganizer:
         except (OSError, PermissionError):
             return None
 
+    def _should_exclude(self, path: Path) -> bool:
+        """检查是否应该排除该路径"""
+        # 检查目录名
+        for part in path.parts:
+            if part in self.EXCLUDED_DIRS:
+                return True
+            if part.startswith("."):
+                return True
+
+        # 检查文件名
+        if path.name in self.EXCLUDED_PATTERNS:
+            return True
+
+        return False
+
     def _is_screenshot(self, path: Path) -> bool:
         """判断是否为截图文件"""
         name = path.name.lower()
-        # macOS 截图命名模式
-        patterns = [
-            "screenshot",
-            "屏幕快照",
-            "截屏",
-            "screen shot",
-            "截图",
-        ]
+        patterns = ["screenshot", "屏幕快照", "截屏", "screen shot", "截图"]
         return any(p in name for p in patterns)
 
-    def _create_smart_folder(self, name: str, query: str, output_dir: Path) -> Path:
+    def _get_category(self, path: Path) -> Optional[FileCategory]:
+        """获取文件所属分类"""
+        ext = path.suffix.lower()
+        for category in self.FILE_CATEGORIES:
+            if ext in category.extensions:
+                return category
+        return None
+
+    def _create_smart_folder(self, name: str, query: str, scope_path: Path, output_dir: Path) -> Path:
         """创建 macOS 智能文件夹（.savedSearch）"""
-        # 智能文件夹是一个 plist 文件
         saved_search = {
             "CompatibleVersion": 1,
             "RawQuery": query,
             "SearchCriteria": {
-                "CurrentFolderPath": [str(self.HOME)],
-                "FXScopeArrayOfPaths": [str(self.HOME)],
+                "CurrentFolderPath": [str(scope_path)],
+                "FXScopeArrayOfPaths": [str(scope_path)],
             },
         }
 
@@ -260,34 +245,30 @@ class FileOrganizer:
                 existing = set(self.MOLE_WHITELIST.read_text().strip().split("\n"))
 
             existing.add(path)
+            existing.discard("")  # 移除空行
 
             self.MOLE_WHITELIST.write_text("\n".join(sorted(existing)) + "\n")
             print(f"🔒 已添加到 disk-cleaner 白名单: {path}")
         except Exception as e:
             print(f"⚠️  添加白名单失败: {e}")
 
-    def get_template(self, name: str) -> Optional[Template]:
-        """获取模板"""
-        return self.TEMPLATES.get(name)
-
-    def list_templates(self):
-        """列出所有模板"""
-        print("📋 可用模板:")
-        print("")
-        for name, template in self.TEMPLATES.items():
-            print(f"  {template.display_name} ({name})")
-            print(f"    {template.description}")
-            print(f"    关注: {', '.join(c.name for c in template.categories)}")
-            print("")
-
-    def create_manual_folders(self, template_name: str) -> OrganizeResult:
+    def create_manual_folders(self, scope: str = "downloads") -> OrganizeResult:
         """手动模式：创建智能文件夹"""
-        template = self.get_template(template_name)
-        if not template:
-            print(f"❌ 未知模板: {template_name}")
-            return None
+        # 确定范围
+        if scope == "downloads":
+            scope_path = self.DOWNLOADS
+            scope_name = "下载文件夹"
+        elif scope == "documents":
+            scope_path = self.DOCUMENTS
+            scope_name = "文档文件夹"
+        elif scope == "home":
+            scope_path = self.HOME
+            scope_name = "用户目录"
+        else:
+            scope_path = Path(scope)
+            scope_name = scope
 
-        print(f"🖐️ 手动模式 - {template.display_name}模板")
+        print(f"🖐️ 手动模式 - 整理范围: {scope_name}")
         print("")
 
         # 创建输出目录
@@ -295,154 +276,115 @@ class FileOrganizer:
         output_dir.mkdir(exist_ok=True)
 
         result = OrganizeResult(
-            template=template_name,
             mode="manual",
             scan_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            scope=str(scope_path),
             output_path=str(output_dir),
         )
 
         # 为每个分类创建智能文件夹
-        for category in template.categories:
-            ext_query = " || ".join(f'kMDItemFSName == "*{ext}"' for ext in category.extensions)
+        for category in self.FILE_CATEGORIES:
+            ext_query = " || ".join(f'kMDItemFSName == "*{ext}"c' for ext in category.extensions)
+            query = f"({ext_query})"
+            folder_name = f"{category.icon} {category.name}"
 
-            # 添加大小条件
-            if category.min_size_bytes > 0:
-                size_kb = category.min_size_bytes // 1024
-                query = f"({ext_query}) && kMDItemFSSize >= {size_kb}000"
-                folder_name = f"{category.icon} {category.name} (>{self._format_size(category.min_size_bytes)})"
-            else:
-                query = ext_query
-                folder_name = f"{category.icon} {category.name}"
-
-            folder_path = self._create_smart_folder(folder_name, query, output_dir)
+            folder_path = self._create_smart_folder(folder_name, query, scope_path, output_dir)
             if folder_path:
                 result.smart_folders.append({
                     "name": folder_name,
                     "path": str(folder_path),
                     "category": category.name,
                 })
-                print(f"  ✅ 创建智能文件夹: {folder_name}")
+                print(f"  ✅ {folder_name}")
 
-        # 添加通用智能文件夹
-        common_folders = [
-            ("📥 本周下载", f'kMDItemFSName == "*" && kMDItemContentCreationDate >= $time.today(-7)'),
-            ("📸 最近截图", 'kMDItemFSName == "*截*" || kMDItemFSName == "*screenshot*"c'),
-            ("💾 大文件 (>100MB)", 'kMDItemFSSize >= 100000000'),
-        ]
-
-        for name, query in common_folders:
-            folder_path = self._create_smart_folder(name, query, output_dir)
-            if folder_path:
-                result.smart_folders.append({
-                    "name": name,
-                    "path": str(folder_path),
-                    "category": "通用",
-                })
-                print(f"  ✅ 创建智能文件夹: {name}")
+        # 添加大文件智能文件夹（限定扩展名）
+        large_ext_query = " || ".join(f'kMDItemFSName == "*{ext}"c' for ext in self.LARGE_FILE_EXTENSIONS)
+        large_query = f"({large_ext_query}) && kMDItemFSSize >= 104857600"  # 100MB
+        folder_path = self._create_smart_folder("💾 大文件 (>100MB)", large_query, scope_path, output_dir)
+        if folder_path:
+            result.smart_folders.append({
+                "name": "💾 大文件 (>100MB)",
+                "path": str(folder_path),
+                "category": "大文件",
+            })
+            print(f"  ✅ 💾 大文件 (>100MB)")
 
         print("")
         print(f"📁 智能文件夹已创建: {output_dir}")
-        print("💡 打开文件夹，双击智能文件夹查看匹配的文件，然后自行整理")
+        print(f"📍 搜索范围: {scope_path}")
+        print("💡 双击智能文件夹查看匹配的文件，然后自行整理")
 
         return result
 
-    def scan_files(
-        self,
-        template_name: str,
-        days: int = 365,
-        scan_paths: list[Path] = None,
-    ) -> dict[str, list[dict]]:
-        """扫描符合条件的文件"""
-        template = self.get_template(template_name)
-        if not template:
-            return {}
+    def auto_organize(self, scope: str = "downloads", days: int = 365, dry_run: bool = False) -> OrganizeResult:
+        """自动模式：扫描并整理文件"""
+        # 确定范围
+        if scope == "downloads":
+            scope_path = self.DOWNLOADS
+            scope_name = "下载文件夹"
+        elif scope == "documents":
+            scope_path = self.DOCUMENTS
+            scope_name = "文档文件夹"
+        else:
+            scope_path = Path(scope)
+            scope_name = scope
 
-        if scan_paths is None:
-            scan_paths = [self.HOME]
+        print(f"🤖 自动模式 - 整理范围: {scope_name}")
+        print("")
+
+        if not scope_path.exists():
+            print(f"❌ 目录不存在: {scope_path}")
+            return None
+
+        result = OrganizeResult(
+            mode="auto",
+            scan_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            scope=str(scope_path),
+        )
 
         # 计算时间阈值
         cutoff_date = datetime.now() - timedelta(days=days)
 
-        # 构建扩展名集合
-        all_extensions = set()
-        for category in template.categories:
-            all_extensions.update(ext.lower() for ext in category.extensions)
-
         # 扫描文件
-        results = {cat.name: [] for cat in template.categories}
+        print(f"🔍 扫描最近 {days} 天内的文件...")
 
-        print(f"🔍 扫描最近 {days} 天内修改的文件...")
+        categorized = {cat.name: [] for cat in self.FILE_CATEGORIES}
+        categorized["其他"] = []
 
-        for scan_path in scan_paths:
-            if not scan_path.exists():
-                continue
+        try:
+            for path in scope_path.rglob("*"):
+                # 排除检查
+                if self._should_exclude(path):
+                    continue
 
-            try:
-                for path in scan_path.rglob("*"):
-                    # 跳过隐藏文件和目录
-                    if any(part.startswith(".") for part in path.parts):
-                        continue
+                if path.is_dir():
+                    continue
 
-                    # 跳过目录
-                    if path.is_dir():
-                        continue
+                # 获取文件信息
+                info = self._get_file_info(path)
+                if not info:
+                    continue
 
-                    # 检查扩展名
-                    ext = path.suffix.lower()
-                    if ext not in all_extensions:
-                        continue
+                # 检查修改时间
+                if info["modified"] < cutoff_date:
+                    continue
 
-                    # 获取文件信息
-                    info = self._get_file_info(path)
-                    if not info:
-                        continue
+                # 分类
+                category = self._get_category(path)
+                if category:
+                    categorized[category.name].append(info)
+                # 不归类未知文件（避免误移动）
 
-                    # 检查修改时间
-                    if info["modified"] < cutoff_date:
-                        continue
-
-                    # 分类
-                    for category in template.categories:
-                        if ext in [e.lower() for e in category.extensions]:
-                            # 检查大小限制
-                            if info["size_bytes"] >= category.min_size_bytes:
-                                results[category.name].append(info)
-                            break
-
-            except PermissionError:
-                continue
-
-        return results
-
-    def auto_organize(
-        self,
-        template_name: str,
-        days: int = 365,
-        dry_run: bool = False,
-    ) -> OrganizeResult:
-        """自动模式：扫描并整理文件"""
-        template = self.get_template(template_name)
-        if not template:
-            print(f"❌ 未知模板: {template_name}")
-            return None
-
-        print(f"🤖 自动模式 - {template.display_name}模板")
-        print("")
-
-        # 扫描文件
-        scanned = self.scan_files(template_name, days)
-
-        result = OrganizeResult(
-            template=template_name,
-            mode="auto",
-            scan_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        )
+        except PermissionError:
+            print(f"❌ 无法访问: {scope_path}")
+            print("💡 请在「系统设置 → 隐私与安全性 → 文件和文件夹」中授权")
+            return result
 
         # 统计
-        for category_name, files in scanned.items():
+        for cat_name, files in categorized.items():
             if files:
                 total_size = sum(f["size_bytes"] for f in files)
-                result.categories[category_name] = {
+                result.categories[cat_name] = {
                     "files": files,
                     "count": len(files),
                     "size_bytes": total_size,
@@ -455,14 +397,14 @@ class FileOrganizer:
             print("ℹ️  未找到符合条件的文件")
             return result
 
-        # 显示扫描结果
-        print(f"📊 扫描结果: {result.total_files} 个文件, {self._format_size(result.total_size_bytes)}")
+        # 显示结果
+        print(f"📊 找到 {result.total_files} 个文件, {self._format_size(result.total_size_bytes)}")
         print("")
 
-        for cat in template.categories:
+        for cat in self.FILE_CATEGORIES:
             if cat.name in result.categories:
                 data = result.categories[cat.name]
-                print(f"  {cat.icon} {cat.name}: {data['count']} 个文件, {data['size_human']}")
+                print(f"  {cat.icon} {cat.name}: {data['count']} 个, {data['size_human']}")
 
         print("")
 
@@ -479,7 +421,8 @@ class FileOrganizer:
         # 移动文件
         print("📦 正在整理文件...")
 
-        for cat in template.categories:
+        moved_count = 0
+        for cat in self.FILE_CATEGORIES:
             if cat.name not in result.categories:
                 continue
 
@@ -502,136 +445,14 @@ class FileOrganizer:
                 try:
                     shutil.move(str(src), str(dst))
                     file_info["new_path"] = str(dst)
+                    moved_count += 1
                 except Exception as e:
                     print(f"  ⚠️  移动失败: {src.name} - {e}")
 
-        print(f"✅ 整理完成: {output_dir}")
+        print(f"✅ 整理完成: {moved_count} 个文件 → {output_dir}")
 
         # 添加到白名单
         self._add_to_whitelist(str(output_dir))
-
-        return result
-
-    def organize_downloads(self, auto: bool = False, days: int = 30) -> OrganizeResult:
-        """整理下载文件夹"""
-        print("📥 整理下载文件夹")
-        print("")
-
-        result = OrganizeResult(
-            template="downloads",
-            mode="auto" if auto else "manual",
-            scan_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        )
-
-        if not self.DOWNLOADS.exists():
-            print("❌ Downloads 文件夹不存在")
-            return result
-
-        try:
-            list(self.DOWNLOADS.iterdir())
-        except PermissionError:
-            print("❌ 无法访问 Downloads 文件夹")
-            print("💡 请在「系统设置 → 隐私与安全性 → 文件和文件夹」中授权")
-            return result
-
-        # 分类定义
-        download_categories = {
-            "文档": [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".md"],
-            "图片": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".svg"],
-            "视频": [".mp4", ".mov", ".avi", ".mkv", ".wmv"],
-            "音频": [".mp3", ".wav", ".flac", ".aac", ".m4a"],
-            "压缩包": [".zip", ".rar", ".7z", ".tar", ".gz", ".dmg"],
-            "安装包": [".pkg", ".app", ".exe", ".msi"],
-            "代码": [".py", ".js", ".ts", ".json", ".yaml", ".html", ".css"],
-        }
-
-        # 扫描
-        cutoff_date = datetime.now() - timedelta(days=days)
-        categorized = {cat: [] for cat in download_categories}
-        categorized["其他"] = []
-
-        try:
-            for path in self.DOWNLOADS.iterdir():
-                if path.name.startswith(".") or path.is_dir():
-                    continue
-
-                info = self._get_file_info(path)
-                if not info:
-                    continue
-
-                if info["modified"] < cutoff_date:
-                    continue
-
-                ext = path.suffix.lower()
-                found = False
-                for cat_name, extensions in download_categories.items():
-                    if ext in extensions:
-                        categorized[cat_name].append(info)
-                        found = True
-                        break
-
-                if not found:
-                    categorized["其他"].append(info)
-        except PermissionError:
-            print("❌ 无法访问 Downloads 文件夹")
-            print("💡 请在「系统设置 → 隐私与安全性 → 文件和文件夹」中授权")
-            return result
-
-        # 统计
-        for cat_name, files in categorized.items():
-            if files:
-                total_size = sum(f["size_bytes"] for f in files)
-                result.categories[cat_name] = {
-                    "files": files,
-                    "count": len(files),
-                    "size_bytes": total_size,
-                    "size_human": self._format_size(total_size),
-                }
-                result.total_files += len(files)
-                result.total_size_bytes += total_size
-
-        # 显示结果
-        print(f"📊 扫描结果: {result.total_files} 个文件, {self._format_size(result.total_size_bytes)}")
-        print("")
-
-        for cat_name, files in categorized.items():
-            if files:
-                size = sum(f["size_bytes"] for f in files)
-                print(f"  📁 {cat_name}: {len(files)} 个文件, {self._format_size(size)}")
-
-        if auto and result.total_files > 0:
-            print("")
-            print("📦 正在整理...")
-
-            output_dir = self.DOWNLOADS / "已整理"
-            output_dir.mkdir(exist_ok=True)
-            result.output_path = str(output_dir)
-
-            for cat_name, files in categorized.items():
-                if not files:
-                    continue
-
-                cat_dir = output_dir / cat_name
-                cat_dir.mkdir(exist_ok=True)
-
-                for file_info in files:
-                    src = Path(file_info["path"])
-                    dst = cat_dir / src.name
-
-                    if dst.exists():
-                        stem = dst.stem
-                        suffix = dst.suffix
-                        counter = 1
-                        while dst.exists():
-                            dst = cat_dir / f"{stem}_{counter}{suffix}"
-                            counter += 1
-
-                    try:
-                        shutil.move(str(src), str(dst))
-                    except Exception as e:
-                        print(f"  ⚠️  移动失败: {src.name} - {e}")
-
-            print(f"✅ 整理完成: {output_dir}")
 
         return result
 
@@ -641,8 +462,7 @@ class FileOrganizer:
         print("")
 
         result = OrganizeResult(
-            template="screenshots",
-            mode="auto" if auto else "manual",
+            mode="auto" if auto else "scan",
             scan_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
@@ -654,16 +474,19 @@ class FileOrganizer:
             if not location.exists():
                 continue
 
-            for path in location.iterdir():
-                if not path.is_file():
-                    continue
+            try:
+                for path in location.iterdir():
+                    if not path.is_file():
+                        continue
 
-                if not self._is_screenshot(path):
-                    continue
+                    if not self._is_screenshot(path):
+                        continue
 
-                info = self._get_file_info(path)
-                if info and info["modified"] >= cutoff_date:
-                    screenshots.append(info)
+                    info = self._get_file_info(path)
+                    if info and info["modified"] >= cutoff_date:
+                        screenshots.append(info)
+            except PermissionError:
+                continue
 
         if not screenshots:
             print("ℹ️  未找到截图文件")
@@ -724,13 +547,12 @@ class FileOrganizer:
 
         return result
 
-    def find_large_files(self, min_size_mb: int = 100, limit: int = 50) -> OrganizeResult:
-        """发现大文件"""
-        print(f"💾 查找大于 {min_size_mb}MB 的文件")
+    def find_large_files(self, min_size_mb: int = 100, limit: int = 50, scope: str = "home") -> OrganizeResult:
+        """发现大文件（仅显示明确用途的文件类型）"""
+        print(f"💾 查找大于 {min_size_mb}MB 的文件（仅文档/媒体类）")
         print("")
 
         result = OrganizeResult(
-            template="large_files",
             mode="scan",
             scan_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
@@ -738,8 +560,13 @@ class FileOrganizer:
         min_size_bytes = min_size_mb * 1024 * 1024
         large_files = []
 
-        # 扫描用户目录
-        scan_paths = [self.DOCUMENTS, self.DOWNLOADS, self.DESKTOP, self.PICTURES]
+        # 确定扫描范围
+        if scope == "home":
+            scan_paths = [self.DOCUMENTS, self.DOWNLOADS, self.DESKTOP, self.PICTURES]
+        elif scope == "downloads":
+            scan_paths = [self.DOWNLOADS]
+        else:
+            scan_paths = [Path(scope)]
 
         for scan_path in scan_paths:
             if not scan_path.exists():
@@ -747,7 +574,15 @@ class FileOrganizer:
 
             try:
                 for path in scan_path.rglob("*"):
-                    if path.name.startswith(".") or path.is_dir():
+                    # 排除检查
+                    if self._should_exclude(path):
+                        continue
+
+                    if path.is_dir():
+                        continue
+
+                    # 只显示明确用途的文件类型
+                    if path.suffix.lower() not in self.LARGE_FILE_EXTENSIONS:
                         continue
 
                     info = self._get_file_info(path)
@@ -765,6 +600,10 @@ class FileOrganizer:
         result.total_files = len(large_files)
         result.total_size_bytes = sum(f["size_bytes"] for f in large_files)
 
+        if result.total_files == 0:
+            print("ℹ️  未找到符合条件的大文件")
+            return result
+
         print(f"📊 找到 {result.total_files} 个大文件, 共 {self._format_size(result.total_size_bytes)}")
         print("")
 
@@ -778,7 +617,7 @@ class FileOrganizer:
 
         for location, files in by_location.items():
             print(f"📁 {location}:")
-            for f in files[:10]:  # 每个位置显示前10个
+            for f in files[:10]:
                 print(f"  💾 {f['size_human']:>10}  {f['name']}")
             if len(files) > 10:
                 print(f"  ... 还有 {len(files) - 10} 个文件")
@@ -788,6 +627,37 @@ class FileOrganizer:
 
         return result
 
+    def show_status(self):
+        """显示当前状态"""
+        print("📊 文件整理助手状态")
+        print("")
+
+        # 检查下载文件夹
+        try:
+            downloads_count = len(list(self.DOWNLOADS.iterdir()))
+            print(f"📥 下载文件夹: {downloads_count} 个项目")
+        except PermissionError:
+            print("📥 下载文件夹: ⚠️ 无权限访问")
+
+        # 检查截图
+        screenshot_count = 0
+        for loc in self.SCREENSHOT_LOCATIONS:
+            if loc.exists():
+                try:
+                    for p in loc.iterdir():
+                        if self._is_screenshot(p):
+                            screenshot_count += 1
+                except PermissionError:
+                    pass
+        print(f"📸 截图文件: {screenshot_count} 张")
+
+        # 检查白名单
+        if self.MOLE_WHITELIST.exists():
+            whitelist = [l for l in self.MOLE_WHITELIST.read_text().strip().split("\n") if l]
+            print(f"🔒 白名单项目: {len(whitelist)} 个")
+        else:
+            print("🔒 白名单项目: 0 个")
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -795,18 +665,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  %(prog)s --list-templates                    # 列出所有模板
-  %(prog)s --template office-worker --manual   # 上班族模板，手动模式
-  %(prog)s --template developer --auto         # 码农模板，自动模式
-  %(prog)s --downloads                         # 整理下载文件夹
-  %(prog)s --screenshots --auto                # 自动整理截图
-  %(prog)s --large-files --min-size 500        # 查找大于500MB的文件
+  %(prog)s --manual                    # 手动模式（默认整理下载文件夹）
+  %(prog)s --manual --scope documents  # 手动模式，整理文档文件夹
+  %(prog)s --auto                      # 自动整理下载文件夹
+  %(prog)s --auto --dry-run            # 预览，不实际移动
+  %(prog)s --screenshots               # 查看截图
+  %(prog)s --screenshots --auto        # 自动整理截图
+  %(prog)s --large-files               # 查找大文件
+  %(prog)s --status                    # 查看状态
         """
     )
-
-    # 模板选项
-    parser.add_argument("--list-templates", action="store_true", help="列出所有可用模板")
-    parser.add_argument("--template", "-t", choices=["office-worker", "developer"], help="选择模板")
 
     # 模式选项
     parser.add_argument("--manual", action="store_true", help="手动模式：创建智能文件夹")
@@ -814,9 +682,13 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="预览模式，不实际移动文件")
 
     # 功能选项
-    parser.add_argument("--downloads", action="store_true", help="整理下载文件夹")
     parser.add_argument("--screenshots", action="store_true", help="整理截图文件")
     parser.add_argument("--large-files", action="store_true", help="查找大文件")
+    parser.add_argument("--status", action="store_true", help="显示状态")
+
+    # 范围选项
+    parser.add_argument("--scope", default="downloads",
+                        help="整理范围: downloads（默认）, documents, home, 或自定义路径")
 
     # 参数选项
     parser.add_argument("--days", type=int, default=365, help="扫描最近 N 天的文件（默认 365）")
@@ -824,41 +696,39 @@ def main():
 
     # 输出选项
     parser.add_argument("--json", action="store_true", help="JSON 格式输出")
-    parser.add_argument("--html", action="store_true", help="HTML 格式报告")
 
     args = parser.parse_args()
 
     organizer = FileOrganizer()
 
-    # 列出模板
-    if args.list_templates:
-        organizer.list_templates()
+    # 状态
+    if args.status:
+        organizer.show_status()
         return
 
-    # 模板操作
-    if args.template:
-        if args.manual:
-            result = organizer.create_manual_folders(args.template)
-        elif args.auto:
-            result = organizer.auto_organize(args.template, args.days, args.dry_run)
-        else:
-            print("❌ 请指定模式: --manual 或 --auto")
-            return
-
+    # 手动模式
+    if args.manual:
+        result = organizer.create_manual_folders(args.scope)
         if args.json and result:
             print(json.dumps({
-                "template": result.template,
                 "mode": result.mode,
-                "scan_time": result.scan_time,
+                "scope": result.scope,
+                "output_path": result.output_path,
+                "smart_folders": result.smart_folders,
+            }, indent=2, ensure_ascii=False))
+        return
+
+    # 自动模式
+    if args.auto and not args.screenshots:
+        result = organizer.auto_organize(args.scope, args.days, args.dry_run)
+        if args.json and result:
+            print(json.dumps({
+                "mode": result.mode,
+                "scope": result.scope,
                 "total_files": result.total_files,
                 "total_size_bytes": result.total_size_bytes,
                 "output_path": result.output_path,
             }, indent=2, ensure_ascii=False))
-        return
-
-    # 下载文件夹
-    if args.downloads:
-        organizer.organize_downloads(auto=args.auto, days=args.days)
         return
 
     # 截图
@@ -868,7 +738,7 @@ def main():
 
     # 大文件
     if args.large_files:
-        organizer.find_large_files(min_size_mb=args.min_size)
+        organizer.find_large_files(min_size_mb=args.min_size, scope=args.scope)
         return
 
     # 无参数时显示帮助
