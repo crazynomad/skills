@@ -113,6 +113,50 @@ class MoleCleaner:
         "通讯应用缓存": ("caution", "清理可能影响聊天历史中的媒体显示"),
     }
 
+    # 清理档位定义 (Air/Pro/Max)
+    TIER_DEFINITIONS = {
+        "air": {
+            "name": "🌬️ Air",
+            "description": "最安全，只清浏览器缓存和系统日志",
+            "categories": ["浏览器缓存", "系统日志"],
+            "risk_level": "低风险",
+        },
+        "pro": {
+            "name": "⚡ Pro",
+            "description": "推荐，平衡安全与空间释放",
+            "categories": ["浏览器缓存", "系统日志", "用户应用缓存", "包管理器缓存", "废纸篓"],
+            "risk_level": "中等风险",
+        },
+        "max": {
+            "name": "🚀 Max",
+            "description": "最大化释放空间，包含所有可清理项",
+            "categories": None,  # None 表示所有类别
+            "risk_level": "较高风险",
+        },
+    }
+
+    # 白名单预设 (白领办公文档保护)
+    WHITELIST_PRESETS = {
+        "office": {
+            "name": "白领办公",
+            "description": "保护常见办公文档",
+            "extensions": [".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".pages", ".numbers", ".key"],
+            "paths": ["~/Documents", "~/Desktop"],
+        },
+        "developer": {
+            "name": "开发者",
+            "description": "保护代码和配置文件",
+            "extensions": [".py", ".js", ".ts", ".go", ".rs", ".java", ".swift", ".json", ".yaml", ".yml", ".toml"],
+            "paths": ["~/Projects", "~/Developer", "~/Code"],
+        },
+        "media": {
+            "name": "媒体创作",
+            "description": "保护视频、音频、图像项目",
+            "extensions": [".psd", ".ai", ".sketch", ".fig", ".aep", ".prproj", ".fcpx", ".mov", ".mp4"],
+            "paths": ["~/Movies", "~/Pictures", "~/Music"],
+        },
+    }
+
     # Mole 主题色 🦔
     MOLE_COLORS = {
         "primary": "#8B4513",      # 棕色 (鼹鼠色)
@@ -452,31 +496,63 @@ class MoleCleaner:
         return categories, total_bytes
 
     def _estimate_tiers(self, categories: dict) -> dict:
-        """估算三档清理策略的可释放空间"""
-        low_risk = 0
-        default = 0
-        maximum = 0
+        """估算三档清理策略的可释放空间 (Air/Pro/Max)"""
+        air_size = 0
+        pro_size = 0
+        max_size = 0
 
-        # 默认更保守的 caution 列表（不纳入默认档）
-        caution_exclude = {"应用支持文件", "应用专属缓存", "通讯应用缓存"}
+        air_categories = set(self.TIER_DEFINITIONS["air"]["categories"])
+        pro_categories = set(self.TIER_DEFINITIONS["pro"]["categories"])
 
         for category, data in categories.items():
             size = data.get("size_bytes", 0)
-            advice_type, _ = self.CATEGORY_ADVICE.get(category, ("info", ""))
+            max_size += size
 
-            maximum += size
-            if advice_type == "safe":
-                low_risk += size
-                default += size
-            elif advice_type == "caution":
-                if category not in caution_exclude:
-                    default += size
+            if category in air_categories:
+                air_size += size
+
+            if category in pro_categories:
+                pro_size += size
 
         return {
-            "low_risk": low_risk,
-            "default": default,
-            "maximum": maximum
+            "air": air_size,
+            "pro": pro_size,
+            "max": max_size,
+            # 保留旧命名以兼容
+            "low_risk": air_size,
+            "default": pro_size,
+            "maximum": max_size,
         }
+
+    def estimate_tier_size(self, tier: str, categories: dict) -> int:
+        """计算指定档位的清理大小"""
+        tier_def = self.TIER_DEFINITIONS.get(tier)
+        if not tier_def:
+            return 0
+
+        total = 0
+        tier_categories = tier_def["categories"]
+
+        for category, data in categories.items():
+            if tier_categories is None or category in tier_categories:
+                total += data.get("size_bytes", 0)
+
+        return total
+
+    def get_tier_categories(self, tier: str, categories: dict) -> list:
+        """获取指定档位会清理的类别列表"""
+        tier_def = self.TIER_DEFINITIONS.get(tier)
+        if not tier_def:
+            return []
+
+        tier_categories = tier_def["categories"]
+        result = []
+
+        for category in categories.keys():
+            if tier_categories is None or category in tier_categories:
+                result.append(category)
+
+        return result
 
     def run_dry_run(self, allow_sample_data: bool = True) -> Optional[CleanReport]:
         """执行 dry-run 并解析结果"""
@@ -575,12 +651,16 @@ class MoleCleaner:
             else:
                 report.protected_items = ["Playwright 缓存", "Ollama 模型", "JetBrains 配置", "iCloud 文档"]
 
-            # 生成分层策略估算
+            # 生成分层策略估算 (Air/Pro/Max)
             tier_bytes = self._estimate_tiers(report.categories)
             report.tier_estimates = {
-                "low_risk": self._format_size(tier_bytes["low_risk"]),
-                "default": self._format_size(tier_bytes["default"]),
-                "maximum": self._format_size(tier_bytes["maximum"]),
+                "air": self._format_size(tier_bytes["air"]),
+                "pro": self._format_size(tier_bytes["pro"]),
+                "max": self._format_size(tier_bytes["max"]),
+                # 保留旧命名以兼容 HTML 模板
+                "low_risk": self._format_size(tier_bytes["air"]),
+                "default": self._format_size(tier_bytes["pro"]),
+                "maximum": self._format_size(tier_bytes["max"]),
             }
 
             return report
@@ -591,6 +671,132 @@ class MoleCleaner:
             print(f"❌ 扫描失败: {e}")
 
         return None
+
+    def generate_csv(self, report: CleanReport, output_path: Optional[str] = None) -> str:
+        """生成 CSV 格式的完整清单"""
+        import csv
+        from io import StringIO
+
+        # 读取 clean-list.txt 获取详细路径
+        clean_list_paths = self._read_clean_list()
+
+        # 默认保存到桌面
+        if output_path is None:
+            desktop = os.path.expanduser("~/Desktop")
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            output_path = os.path.join(desktop, f"mole-clean-list-{timestamp}.csv")
+
+        rows = []
+        for path_line in clean_list_paths:
+            # 解析路径和大小
+            clean_path = path_line.split("#", 1)[0].strip()
+            if not clean_path or clean_path.startswith("==="):
+                continue
+
+            size_str = "未知"
+            size_bytes = 0
+            size_match = re.search(r'#\s*([\d.]+)\s*(B|KB|MB|GB|TB)', path_line, re.IGNORECASE)
+            if size_match:
+                size_str = size_match.group(0).replace("#", "").strip()
+                size_bytes = self._parse_size(size_str)
+
+            category, description = self._categorize_path(clean_path)
+            advice_type, advice_text = self.CATEGORY_ADVICE.get(category, ("info", "请根据需求决定"))
+
+            rows.append({
+                "路径": clean_path,
+                "类别": category,
+                "大小": size_str,
+                "大小(字节)": size_bytes,
+                "风险等级": "安全" if advice_type == "safe" else "谨慎",
+                "建议": advice_text,
+                "说明": description,
+            })
+
+        # 按大小排序
+        rows.sort(key=lambda x: x["大小(字节)"], reverse=True)
+
+        # 写入 CSV
+        output = StringIO()
+        if rows:
+            fieldnames = ["路径", "类别", "大小", "大小(字节)", "风险等级", "建议", "说明"]
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+        csv_content = output.getvalue()
+
+        # 保存文件
+        try:
+            with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
+                f.write(csv_content)
+            print(f"📄 CSV 清单已保存: {output_path}")
+
+            # 尝试打开文件
+            if sys.platform == "darwin":
+                subprocess.run(["open", output_path], check=False)
+        except Exception as e:
+            print(f"⚠️  保存 CSV 失败: {e}")
+
+        return output_path
+
+    def configure_whitelist(self, preset: str = None, custom_paths: list = None) -> bool:
+        """配置 Mole 白名单"""
+        mole_config_dir = os.path.expanduser("~/.config/mole")
+        whitelist_path = os.path.join(mole_config_dir, "whitelist.txt")
+
+        os.makedirs(mole_config_dir, exist_ok=True)
+
+        # 读取现有白名单
+        existing = set()
+        if os.path.exists(whitelist_path):
+            with open(whitelist_path, "r", encoding="utf-8") as f:
+                existing = set(line.strip() for line in f if line.strip())
+
+        # 添加预设
+        if preset and preset in self.WHITELIST_PRESETS:
+            preset_def = self.WHITELIST_PRESETS[preset]
+            for path in preset_def.get("paths", []):
+                expanded = os.path.expanduser(path)
+                if os.path.exists(expanded):
+                    existing.add(expanded)
+            print(f"✅ 已添加预设白名单: {preset_def['name']}")
+            print(f"   保护路径: {', '.join(preset_def.get('paths', []))}")
+
+        # 添加自定义路径
+        if custom_paths:
+            for path in custom_paths:
+                expanded = os.path.expanduser(path)
+                if os.path.exists(expanded):
+                    existing.add(expanded)
+                    print(f"✅ 已添加白名单: {expanded}")
+                else:
+                    print(f"⚠️  路径不存在: {path}")
+
+        # 保存白名单
+        with open(whitelist_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(sorted(existing)))
+
+        print(f"\n📝 白名单已保存到: {whitelist_path}")
+        print(f"   共 {len(existing)} 个保护路径")
+
+        return True
+
+    def show_whitelist(self) -> list:
+        """显示当前白名单"""
+        whitelist_path = os.path.expanduser("~/.config/mole/whitelist.txt")
+        if not os.path.exists(whitelist_path):
+            print("📋 当前白名单为空")
+            return []
+
+        with open(whitelist_path, "r", encoding="utf-8") as f:
+            items = [line.strip() for line in f if line.strip()]
+
+        print("📋 当前白名单:")
+        for item in items:
+            print(f"  🛡️ {item}")
+
+        return items
 
     def generate_report(self, report: CleanReport, use_json: bool = False) -> str:
         """生成可读报告"""
@@ -682,10 +888,14 @@ class MoleCleaner:
 
         if report.tier_estimates:
             lines.append("")
-            lines.append("🧭 清理策略建议（预估）:")
-            lines.append(f"  1) 低风险：{report.tier_estimates.get('low_risk', '0 B')}")
-            lines.append(f"  2) 默认：{report.tier_estimates.get('default', '0 B')}")
-            lines.append(f"  3) 最大拯救：{report.tier_estimates.get('maximum', '0 B')}")
+            lines.append("🧭 清理方案选择:")
+            lines.append("")
+            lines.append(f"  1. 🌬️ Air   - 最安全，只清浏览器和日志      → {report.tier_estimates.get('air', '0 B')}")
+            lines.append(f"  2. ⚡ Pro   - 推荐，平衡安全与空间          → {report.tier_estimates.get('pro', '0 B')}")
+            lines.append(f"  3. 🚀 Max   - 最大化释放硬盘空间            → {report.tier_estimates.get('max', '0 B')}")
+            lines.append(f"  4. 📋 先看完整清单 - 生成 CSV 详细列表")
+            lines.append(f"  5. ⚙️  配置白名单 - 保护特定路径")
+            lines.append("")
             lines.append("  提示：以上为估算值，实际释放空间以 Mole 清理结果为准。")
 
         return "\n".join(lines)
@@ -1167,9 +1377,14 @@ def main():
   %(prog)s --check              # 检查环境
   %(prog)s --preview            # 预览清理内容
   %(prog)s --preview --html     # HTML 格式报告（自动打开浏览器）
-  %(prog)s --clean              # 执行清理
+  %(prog)s --preview --csv      # 生成 CSV 完整清单（保存到桌面）
+  %(prog)s --clean --tier air   # 执行 Air 档清理（最安全）
+  %(prog)s --clean --tier pro   # 执行 Pro 档清理（推荐）
+  %(prog)s --clean --tier max   # 执行 Max 档清理（最大化）
   %(prog)s --status             # 查看磁盘状态
-  %(prog)s --preview --json     # JSON 格式输出
+  %(prog)s --whitelist --preset office  # 添加白领办公预设白名单
+  %(prog)s --whitelist --add ~/Documents/重要项目  # 添加自定义白名单
+  %(prog)s --whitelist --show   # 查看当前白名单
         """
     )
 
@@ -1180,6 +1395,8 @@ def main():
     parser.add_argument("--auto-install", action="store_true", help="自动安装缺失依赖")
     parser.add_argument("--json", action="store_true", help="JSON 格式输出")
     parser.add_argument("--html", action="store_true", help="HTML 格式报告（自动打开浏览器）")
+    parser.add_argument("--csv", action="store_true", help="生成 CSV 完整清单（保存到桌面并打开）")
+    parser.add_argument("--tier", choices=["air", "pro", "max"], help="清理档位: air(最安全), pro(推荐), max(最大化)")
     parser.add_argument("--no-sample-data", action="store_true", help="禁用解析失败时的示例数据")
     parser.add_argument("--save-report", action="store_true", help="保存报告到默认路径")
     parser.add_argument("--confirm", action="store_true", help="清理前进行二次确认（非交互）")
@@ -1187,6 +1404,12 @@ def main():
     parser.add_argument("--no-open-achievement", action="store_true", help="清理后不自动打开成就页")
     parser.add_argument("--show-achievement", action="store_true", help="显示示例成就页（用于测试）")
     parser.add_argument("-o", "--output", help="保存报告到文件")
+
+    # 白名单相关参数
+    parser.add_argument("--whitelist", action="store_true", help="白名单配置模式")
+    parser.add_argument("--preset", choices=["office", "developer", "media"], help="白名单预设: office(白领办公), developer(开发者), media(媒体创作)")
+    parser.add_argument("--add", nargs="+", metavar="PATH", help="添加自定义白名单路径")
+    parser.add_argument("--show", action="store_true", help="显示当前白名单")
 
     args = parser.parse_args()
 
@@ -1200,6 +1423,23 @@ def main():
         html_path = cleaner.save_and_open_achievement(sample_freed, "50 GB", "65 GB")
         if html_path:
             print(f"\n📄 成就页已保存并打开: {html_path}")
+        return
+
+    # 白名单配置
+    if args.whitelist:
+        if args.show:
+            cleaner.show_whitelist()
+        elif args.preset or args.add:
+            cleaner.configure_whitelist(preset=args.preset, custom_paths=args.add)
+        else:
+            # 显示可用预设
+            print("📋 可用的白名单预设:")
+            for key, preset in cleaner.WHITELIST_PRESETS.items():
+                print(f"  • {key}: {preset['name']} - {preset['description']}")
+            print("\n使用方法:")
+            print("  --whitelist --preset office    # 添加白领办公预设")
+            print("  --whitelist --add ~/path       # 添加自定义路径")
+            print("  --whitelist --show             # 查看当前白名单")
         return
 
     # 如果没有指定任何操作，显示帮助
@@ -1239,6 +1479,12 @@ def main():
     if args.preview:
         report = cleaner.run_dry_run(allow_sample_data=not args.no_sample_data)
         if report:
+            # CSV 输出
+            if args.csv:
+                csv_path = cleaner.generate_csv(report)
+                print(f"\n💡 提示: CSV 文件已保存到桌面并打开")
+                return
+
             # HTML 输出
             if args.html:
                 html_path = cleaner.save_and_open_report(report)
