@@ -362,10 +362,11 @@ class MoleCleaner:
         return {}
 
     def _parse_size(self, size_str: str) -> int:
-        """解析大小字符串为字节数"""
+        """解析大小字符串为字节数（支持 SI 和 IEC 单位）"""
         size_str = size_str.strip().upper()
         multipliers = {
             'B': 1,
+            # SI 单位
             'KB': 1024,
             'K': 1024,
             'MB': 1024**2,
@@ -374,6 +375,15 @@ class MoleCleaner:
             'G': 1024**3,
             'TB': 1024**4,
             'T': 1024**4,
+            # IEC 二进制单位 (macOS df -h 使用 Gi, Mi 等)
+            'KI': 1024,
+            'KIB': 1024,
+            'MI': 1024**2,
+            'MIB': 1024**2,
+            'GI': 1024**3,
+            'GIB': 1024**3,
+            'TI': 1024**4,
+            'TIB': 1024**4,
         }
 
         match = re.match(r'([\d.]+)\s*([A-Z]+)?', size_str)
