@@ -20,6 +20,15 @@
         "./srt-title-generator",
         "./youtube-downloader"
       ]
+    },
+    {
+      "name": "doc-mindmap",
+      "description": "Document intelligence assistant - batch convert office documents to Markdown, generate summaries and mindmap classification",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./doc-mindmap"
+      ]
     }
   ]
 }

@@ -21,6 +21,11 @@ Each skill follows the pattern:
 - `SKILL.md`: YAML frontmatter (name, description) + usage documentation
 - `scripts/`: Python scripts that implement the skill functionality
 
+## Requirements
+
+- Python 3.10+
+- macOS for `disk-cleaner` and `file-organizer` (system-specific tools)
+
 ## Available Skills
 
 | Skill | Script | Dependencies |
@@ -29,7 +34,9 @@ Each skill follows the pattern:
 | podcast-downloader | `scripts/download_podcast.py` | `pip install requests feedparser` |
 | youtube-downloader | `scripts/download_video.py` | `pip install yt-dlp`, ffmpeg for audio |
 | disk-cleaner | `scripts/mole_cleaner.py` | Mole (`brew install tw93/tap/mole`) |
+| file-organizer | `scripts/file_organizer.py` | macOS only, no extra deps |
 | srt-title-generator | No script (prompt-based) | None |
+| doc-mindmap | `scripts/doc_converter.py` | `pip install 'markitdown[all]'` |
 
 ## Creating New Skills
 
@@ -68,4 +75,16 @@ python youtube-downloader/scripts/download_video.py "YOUTUBE_URL" -o ./output
 # Disk cleaner
 python disk-cleaner/scripts/mole_cleaner.py --preview
 python disk-cleaner/scripts/mole_cleaner.py --clean --confirm
+
+# File organizer (Downloads folder only by default)
+python file-organizer/scripts/file_organizer.py --preview
+python file-organizer/scripts/file_organizer.py --organize --confirm
+
+# Doc mindmap
+python doc-mindmap/scripts/doc_converter.py ~/Documents/test-docs --preview
+python doc-mindmap/scripts/doc_converter.py ~/Documents/test-docs --convert --confirm
 ```
+
+## Plugin Registration
+
+Skills are registered in `.claude-plugin/marketplace.json`. The `plugins[].skills` array lists skill directory paths. When adding a new skill, add its path here to make it discoverable. Note: `disk-cleaner`, `file-organizer`, and `doc-mindmap` are standalone skills not bundled in the `media-skills` plugin group.
