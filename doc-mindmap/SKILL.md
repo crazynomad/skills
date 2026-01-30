@@ -28,6 +28,7 @@ Use this skill when users:
 - **📝 本地摘要** - Ollama 本地模型生成摘要，不消耗 Claude 上下文
 - **🗂️ 三维度分类** - 按主题/用途/客户三种方案同时分类
 - **🔗 软链接目录** - symlink 实现多分类共存，零额外磁盘占用
+- **✏️ 智能重命名** - AI 根据内容建议更清晰的文件名，软链接可选用优化名称
 - **🛡️ 安全机制** - 只读转换，不修改原始文件
 
 ## Supported Formats
@@ -77,10 +78,18 @@ python scripts/doc_converter.py ~/Documents/reports --summarize --model qwen3:8b
 python scripts/doc_converter.py ~/Documents/reports --organize
 ```
 
+### 分类 + 使用 AI 建议的文件名
+
+```bash
+python scripts/doc_converter.py ~/Documents/reports --organize --rename
+```
+
 ### 全流程一步完成
 
 ```bash
 python scripts/doc_converter.py ~/Documents/reports --convert --confirm --summarize --organize
+# 含优化文件名
+python scripts/doc_converter.py ~/Documents/reports --convert --confirm --summarize --organize --rename
 ```
 
 ### JSON 格式输出
@@ -98,6 +107,7 @@ python scripts/doc_converter.py ~/Documents --preview --json
 | `--convert` | 执行批量转换（自动跳过重复文件） |
 | `--summarize` | 使用 Ollama 本地模型生成摘要（需先 convert） |
 | `--organize` | 三维度分类并生成软链接目录（需先 summarize） |
+| `--rename` | 软链接使用 AI 建议的优化文件名（配合 --organize） |
 | `--model MODEL` | Ollama 模型名称（默认: qwen2.5:3b） |
 | `--confirm` | 确认执行（安全机制） |
 | `--json` | JSON 格式输出 |
@@ -120,9 +130,9 @@ python scripts/doc_converter.py ~/Documents --preview --json
     ├── schemes/                # 软链接分类目录
     │   ├── by-topic/           # 按主题分类
     │   │   ├── AI技术/
-    │   │   │   └── slides.pptx -> ../../../../slides.pptx
+    │   │   │   └── AI驱动产品管理指南.pptx -> ../../../../slides.pptx  # --rename
     │   │   └── 数据治理/
-    │   │       └── report.pdf -> ../../../../report.pdf
+    │   │       └── C端数据治理规划.pdf -> ../../../../report.pdf       # --rename
     │   ├── by-usage/           # 按用途分类
     │   │   ├── 培训材料/
     │   │   └── 客户交付方案/
@@ -177,13 +187,20 @@ python doc-mindmap/scripts/doc_converter.py <路径> --convert --confirm --summa
 
 ### 第 4 步：三维度分类 + 软链接
 
-使用 Ollama 对每个文档进行三维度分类（主题/用途/客户），生成软链接目录：
+使用 Ollama 对每个文档进行三维度分类（主题/用途/客户），同时为每个文档建议更清晰的文件名：
 
 ```bash
+# 先不带 --rename 运行，展示分类结果和建议文件名
 python doc-mindmap/scripts/doc_converter.py <路径> --organize
 ```
 
-三套分类方案通过软链接同时存在于 `.summaries/schemes/` 下，零额外磁盘占用。
+向用户展示分类结果和 AI 建议的文件名，询问是否使用优化文件名。如果用户同意：
+
+```bash
+python doc-mindmap/scripts/doc_converter.py <路径> --organize --rename
+```
+
+三套分类方案通过软链接同时存在于 `.summaries/schemes/` 下，零额外磁盘占用。`--rename` 仅影响软链接名称，不修改原始文件。
 
 ### 第 5 步：预览分类结果
 
