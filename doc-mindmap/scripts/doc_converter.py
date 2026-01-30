@@ -3,7 +3,7 @@
 Doc Converter - 批量文档转 Markdown 工具
 
 使用 markitdown 将办公文档（PDF、PPT、Word、Excel 等）批量转换为 Markdown，
-生成 CSV 索引供 Claude 后续分析、摘要和思维导图分类。
+通过本地 Ollama 模型生成摘要，生成 CSV 索引供 Claude 后续思维导图分类。
 """
 
 import argparse
@@ -81,6 +81,99 @@ def check_markitdown() -> bool:
         return True
     except ImportError:
         return False
+
+
+# Ollama 配置
+OLLAMA_API_URL = "http://localhost:11434"
+DEFAULT_MODEL = "qwen2.5:3b"
+
+SUMMARY_SYSTEM_PROMPT = "你是文档摘要助手。直接输出摘要内容，不要任何思考过程，不要输出多余的解释。"
+
+SUMMARY_USER_PROMPT = """请为以下文档内容生成一份简明的中文摘要，格式要求：
+
+1. 一句话概括核心内容
+2. 3-5 个要点（每个要点一句话）
+3. 3-5 个关键词
+
+文档名: {filename}
+文档类型: {filetype}
+
+文档内容:
+{content}
+
+请严格按以下 Markdown 格式输出，不要输出其他内容：
+
+**核心内容**: （一句话概括）
+
+## 要点
+
+- 要点 1
+- 要点 2
+- 要点 3
+
+## 关键词
+
+`关键词1` `关键词2` `关键词3`"""
+
+# 摘要时截取的最大字符数，避免超出模型上下文
+MAX_CONTENT_CHARS = 8000
+
+
+def check_ollama(model: str = DEFAULT_MODEL) -> tuple[bool, str]:
+    """检查 Ollama 服务和模型是否可用"""
+    import requests
+    try:
+        resp = requests.get(f"{OLLAMA_API_URL}/api/tags", timeout=5)
+        if resp.status_code != 200:
+            return False, "Ollama 服务未响应"
+        models = [m["name"] for m in resp.json().get("models", [])]
+        # 检查模型是否存在（支持 "qwen3:4b" 匹配 "qwen3:4b" 或 "qwen3:4b-xxx"）
+        base_name = model.split(":")[0] if ":" in model else model
+        found = any(model in m or base_name in m for m in models)
+        if not found:
+            return False, f"模型 {model} 未安装，请运行: ollama pull {model}"
+        return True, ""
+    except requests.ConnectionError:
+        return False, "Ollama 未启动，请运行: ollama serve"
+    except Exception as e:
+        return False, f"Ollama 检查失败: {e}"
+
+
+def ollama_summarize(content: str, filename: str, filetype: str,
+                     model: str = DEFAULT_MODEL) -> str:
+    """使用 Ollama 本地模型生成摘要（通过 chat API 避免 thinking 模式干扰）"""
+    import requests
+    # 截取内容避免超出模型上下文
+    truncated = content[:MAX_CONTENT_CHARS]
+    if len(content) > MAX_CONTENT_CHARS:
+        truncated += f"\n\n... (内容已截取前 {MAX_CONTENT_CHARS} 字符，原文共 {len(content)} 字符)"
+
+    user_prompt = SUMMARY_USER_PROMPT.format(
+        filename=filename,
+        filetype=filetype,
+        content=truncated,
+    )
+
+    resp = requests.post(
+        f"{OLLAMA_API_URL}/api/chat",
+        json={
+            "model": model,
+            "messages": [
+                {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            "stream": False,
+            "options": {"temperature": 0.3, "num_predict": 1024},
+        },
+        timeout=120,
+    )
+    resp.raise_for_status()
+    msg = resp.json().get("message", {})
+    content = msg.get("content", "").strip()
+    # Qwen3 等 thinking 模型可能把内容放在 thinking 字段
+    if not content and msg.get("thinking"):
+        content = msg["thinking"].strip()
+    return content
 
 
 class DocConverter:
@@ -339,6 +432,106 @@ class DocConverter:
 
         return report
 
+    def summarize(self, model: str = DEFAULT_MODEL,
+                  use_json: bool = False) -> dict:
+        """使用 Ollama 为已转换的 Markdown 文件生成摘要"""
+        summaries_dir = self._get_summaries_dir()
+        converted_dir = os.path.join(summaries_dir, "converted")
+        briefs_dir = os.path.join(summaries_dir, "briefs")
+        os.makedirs(briefs_dir, exist_ok=True)
+
+        # 收集已转换的 md 文件
+        if not os.path.isdir(converted_dir):
+            msg = f"转换目录不存在: {converted_dir}，请先运行 --convert"
+            if use_json:
+                print(json.dumps({"error": msg}, ensure_ascii=False))
+            else:
+                print(f"❌ {msg}")
+            return {"error": msg}
+
+        md_files = sorted(Path(converted_dir).glob("*.md"))
+        if not md_files:
+            msg = "没有找到已转换的 Markdown 文件"
+            if use_json:
+                print(json.dumps({"error": msg}, ensure_ascii=False))
+            else:
+                print(f"ℹ️  {msg}")
+            return {"error": msg}
+
+        if not use_json:
+            print(f"🤖 使用模型 {model} 生成摘要...")
+            print(f"📁 摘要输出: {briefs_dir}")
+            print(f"📄 待处理: {len(md_files)} 个文件")
+            print("")
+
+        results = []
+        success_count = 0
+        fail_count = 0
+
+        for i, md_file in enumerate(md_files, 1):
+            name = md_file.stem  # e.g. "report.pdf"
+            brief_path = os.path.join(briefs_dir, f"{name}.brief.md")
+
+            if not use_json:
+                print(f"  [{i}/{len(md_files)}] 摘要: {md_file.name}...", end=" ",
+                      flush=True)
+
+            try:
+                content = md_file.read_text(encoding="utf-8")
+                # 跳过空内容
+                if len(content.strip()) < 50:
+                    if not use_json:
+                        print("⏭️  内容过少，跳过")
+                    results.append({"file": md_file.name, "status": "skipped",
+                                    "reason": "内容过少"})
+                    continue
+
+                # 提取文件类型（从文件名如 report.pdf.md 中取 .pdf）
+                parts = name.rsplit(".", 1)
+                filetype = f".{parts[-1]}" if len(parts) > 1 else ""
+
+                summary = ollama_summarize(content, name, filetype, model)
+
+                # 写入摘要文件
+                with open(brief_path, "w", encoding="utf-8") as f:
+                    f.write(f"# {name} 摘要\n\n")
+                    f.write(f"**文件类型**: {filetype} | ")
+                    f.write(f"**模型**: {model}\n\n")
+                    f.write(summary)
+                    f.write("\n")
+
+                success_count += 1
+                results.append({"file": md_file.name, "status": "success",
+                                "brief_path": brief_path})
+
+                if not use_json:
+                    print("✅")
+
+            except Exception as e:
+                fail_count += 1
+                results.append({"file": md_file.name, "status": "failed",
+                                "error": str(e)})
+                if not use_json:
+                    print(f"❌ {e}")
+
+        summary_result = {
+            "model": model,
+            "total": len(md_files),
+            "success": success_count,
+            "failed": fail_count,
+            "briefs_dir": briefs_dir,
+            "results": results,
+        }
+
+        if use_json:
+            print(json.dumps(summary_result, indent=2, ensure_ascii=False))
+        else:
+            print("")
+            print(f"✅ 摘要完成: {success_count} 成功, {fail_count} 失败")
+            print(f"📁 摘要文件: {briefs_dir}")
+
+        return summary_result
+
     def _write_csv(self, csv_path: str):
         """写入 CSV 索引"""
         fieldnames = [
@@ -367,10 +560,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  %(prog)s ~/Documents/reports --preview          # 预览文档列表
-  %(prog)s ~/Documents/reports --convert --confirm # 执行转换
-  %(prog)s file1.pdf file2.pptx --convert --confirm # 转换指定文件
-  %(prog)s ~/Documents --preview --json            # JSON 格式预览
+  %(prog)s ~/Documents/reports --preview              # 预览文档列表
+  %(prog)s ~/Documents/reports --convert --confirm     # 执行转换
+  %(prog)s ~/Documents/reports --summarize             # 用 Ollama 生成摘要
+  %(prog)s ~/Documents/reports --summarize --model qwen3:8b  # 指定模型
+  %(prog)s file1.pdf file2.pptx --convert --confirm    # 转换指定文件
+  %(prog)s ~/Documents --preview --json                # JSON 格式预览
 
 支持格式: .pdf, .pptx, .docx, .xlsx, .xls, .csv, .html, .epub, .json, .xml
         """
@@ -379,12 +574,16 @@ def main():
     parser.add_argument("paths", nargs="+", help="文件或目录路径")
     parser.add_argument("--preview", action="store_true", help="预览模式，列出文档")
     parser.add_argument("--convert", action="store_true", help="执行转换")
+    parser.add_argument("--summarize", action="store_true",
+                        help="使用 Ollama 本地模型生成摘要（需先 --convert）")
+    parser.add_argument("--model", default=DEFAULT_MODEL,
+                        help=f"Ollama 模型名称（默认: {DEFAULT_MODEL}）")
     parser.add_argument("--confirm", action="store_true", help="确认执行（安全机制）")
     parser.add_argument("--json", action="store_true", help="JSON 格式输出")
 
     args = parser.parse_args()
 
-    if not args.preview and not args.convert:
+    if not args.preview and not args.convert and not args.summarize:
         parser.print_help()
         return
 
@@ -407,6 +606,15 @@ def main():
             sys.exit(1)
 
         converter.convert(use_json=args.json)
+
+    if args.summarize:
+        # 检查 Ollama
+        ok, err = check_ollama(args.model)
+        if not ok:
+            print(f"❌ {err}")
+            sys.exit(1)
+
+        converter.summarize(model=args.model, use_json=args.json)
 
 
 if __name__ == "__main__":

@@ -62,6 +62,19 @@ python scripts/doc_converter.py ~/Documents/reports --convert --confirm
 python scripts/doc_converter.py file1.pdf file2.pptx --convert --confirm
 ```
 
+### 生成摘要（需先转换）
+
+```bash
+python scripts/doc_converter.py ~/Documents/reports --summarize
+python scripts/doc_converter.py ~/Documents/reports --summarize --model qwen3:8b
+```
+
+### 转换 + 摘要一步完成
+
+```bash
+python scripts/doc_converter.py ~/Documents/reports --convert --confirm --summarize
+```
+
 ### JSON 格式输出
 
 ```bash
@@ -75,6 +88,8 @@ python scripts/doc_converter.py ~/Documents --preview --json
 | `paths` | 文件或目录路径（支持多个） |
 | `--preview` | 预览模式，列出文档不转换 |
 | `--convert` | 执行批量转换 |
+| `--summarize` | 使用 Ollama 本地模型生成摘要（需先 convert） |
+| `--model MODEL` | Ollama 模型名称（默认: qwen2.5:3b） |
 | `--confirm` | 确认执行（安全机制） |
 | `--json` | JSON 格式输出 |
 
@@ -102,6 +117,8 @@ python scripts/doc_converter.py ~/Documents --preview --json
 
 - Python 3.10+
 - markitdown: `pip install 'markitdown[all]'`
+- Ollama（摘要功能）: `brew install ollama` + `ollama pull qwen2.5:3b`
+- requests: `pip install requests`
 
 ## Claude Workflow
 
@@ -125,32 +142,27 @@ python doc-mindmap/scripts/doc_converter.py <路径> --preview
 python doc-mindmap/scripts/doc_converter.py <路径> --convert --confirm
 ```
 
-### 第 3 步：读取转换结果
+### 第 3 步：生成摘要（Ollama 本地模型）
+
+使用 Ollama 本地模型为每个文档生成摘要，不消耗 Claude 上下文窗口：
+
+```bash
+python doc-mindmap/scripts/doc_converter.py <路径> --summarize
+# 或指定模型
+python doc-mindmap/scripts/doc_converter.py <路径> --summarize --model qwen3:8b
+```
+
+也可以和 convert 一起执行：
+```bash
+python doc-mindmap/scripts/doc_converter.py <路径> --convert --confirm --summarize
+```
+
+摘要保存到 `.summaries/briefs/` 目录。
+
+### 第 4 步：读取摘要结果
 
 1. 读取 `.summaries/index.csv` 获取转换状态
-2. 逐个读取 `.summaries/converted/` 下的 .md 文件
-
-### 第 4 步：生成摘要
-
-为每个成功转换的文档生成 100-200 字的中文摘要，保存到 `.summaries/briefs/` 目录：
-
-摘要格式：
-```markdown
-# {文档名} 摘要
-
-**文件类型**: {类型} | **大小**: {大小}
-**核心内容**: 一句话概括
-
-## 要点
-
-- 要点 1
-- 要点 2
-- 要点 3
-
-## 关键词
-
-`关键词1` `关键词2` `关键词3`
-```
+2. 读取 `.summaries/briefs/` 下的摘要文件
 
 ### 第 5 步：生成思维导图分类
 
