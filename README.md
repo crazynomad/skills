@@ -52,7 +52,11 @@ These skills are structured for use with Claude Code or similar agentic environm
 
 ### Installation
 
-Visit **https://skills.sh/docs** for the recommended installation guide.
+```bash
+npx skills add crazynomad/skills
+```
+
+For more details, visit **https://skills.sh/docs**.
 
 ## Structure
 
