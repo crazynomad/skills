@@ -124,19 +124,22 @@ MAX_CONTENT_CHARS = 8000
 
 CLASSIFY_SYSTEM_PROMPT = "你是文档分类助手。严格按要求的 JSON 格式输出，不要任何思考过程和多余文字。"
 
-CLASSIFY_USER_PROMPT = """请为以下文档摘要进行三维度分类。
+CLASSIFY_USER_PROMPT = """请为以下文档摘要进行三维度分类，并建议一个更清晰的文件名。
 
 文档名: {filename}
 摘要内容:
 {brief}
 
-请从三个维度分类，每个维度只给出一个分类名（2-6个字）：
-1. 按主题: 文档核心主题（如：AI技术、数据治理、运维方案、营销策略）
-2. 按用途: 工作场景用途（如：培训材料、客户交付方案、售前方案、市场营销、内部参考）
-3. 按客户: 所属客户或适用对象（如：沃尔沃、一汽集团、通用方案、内部使用）
+请完成：
+1. 按主题: 文档核心主题（2-6个字，如：AI技术、数据治理、运维方案、营销策略）
+2. 按用途: 工作场景用途（2-6个字，如：培训材料、客户交付方案、售前方案、市场营销、内部参考）
+3. 按客户: 所属客户或适用对象（2-6个字，如：沃尔沃、一汽集团、通用方案、内部使用）
+4. 建议文件名: 根据文档内容建议一个简洁、有意义的中文文件名（不含扩展名，10-25个字符）
+   - 格式参考: "沃尔沃DMS三年运维优化方案"、"AI驱动产品管理培训指南"
+   - 如果原始文件名已经足够清晰，可以保留原名
 
 严格按以下 JSON 格式输出，不要输出其他内容：
-{{"topic": "主题分类", "usage": "用途分类", "client": "客户分类"}}"""
+{{"topic": "主题分类", "usage": "用途分类", "client": "客户分类", "suggested_name": "建议文件名"}}"""
 
 
 def check_ollama(model: str = DEFAULT_MODEL) -> tuple[bool, str]:
@@ -231,7 +234,8 @@ def ollama_classify(brief: str, filename: str,
                 content = content[4:]
         return json.loads(content.strip())
     except (json.JSONDecodeError, IndexError):
-        return {"topic": "未分类", "usage": "未分类", "client": "未分类"}
+        return {"topic": "未分类", "usage": "未分类", "client": "未分类",
+                "suggested_name": ""}
 
 
 class DocConverter:
@@ -642,7 +646,7 @@ class DocConverter:
         return summary_result
 
     def organize(self, model: str = DEFAULT_MODEL,
-                 use_json: bool = False) -> dict:
+                 use_json: bool = False, rename: bool = False) -> dict:
         """读取摘要，用 Ollama 分类，通过软链接生成三套目录结构"""
         summaries_dir = self._get_summaries_dir()
         briefs_dir = os.path.join(summaries_dir, "briefs")
@@ -700,13 +704,17 @@ class DocConverter:
                 classifications.append(cats)
 
                 if not use_json:
+                    suggested = cats.get("suggested_name", "")
                     print(f"✅ 主题:{cats.get('topic','')} | "
                           f"用途:{cats.get('usage','')} | "
                           f"客户:{cats.get('client','')}")
+                    if suggested:
+                        print(f"          📝 建议文件名: {suggested}")
             except Exception as e:
                 classifications.append({
                     "filename": doc_key, "original_path": orig_path,
                     "topic": "未分类", "usage": "未分类", "client": "未分类",
+                    "suggested_name": "",
                 })
                 if not use_json:
                     print(f"❌ {e}")
@@ -738,14 +746,22 @@ class DocConverter:
                 os.makedirs(cat_dir, exist_ok=True)
 
                 src = os.path.abspath(item["original_path"])
-                dst = os.path.join(cat_dir, Path(src).name)
+                # 使用建议文件名或原始文件名
+                orig_name = Path(src).name
+                if rename and item.get("suggested_name"):
+                    ext = Path(src).suffix
+                    link_name = item["suggested_name"] + ext
+                else:
+                    link_name = orig_name
+                dst = os.path.join(cat_dir, link_name)
                 if not os.path.exists(dst):
                     os.symlink(src, dst)
                     link_count += 1
 
         if not use_json:
             print("")
-            print(f"✅ 分类完成，共创建 {link_count} 个软链接")
+            rename_tag = "（使用建议文件名）" if rename else ""
+            print(f"✅ 分类完成，共创建 {link_count} 个软链接{rename_tag}")
             print(f"📁 分类目录: {schemes_dir}")
             print("")
             for scheme_dir, cat_key in scheme_names.items():
@@ -809,6 +825,7 @@ def main():
   %(prog)s ~/Documents/reports --convert --confirm     # 执行转换
   %(prog)s ~/Documents/reports --summarize             # 用 Ollama 生成摘要
   %(prog)s ~/Documents/reports --organize              # 三维度分类 + 软链接
+  %(prog)s ~/Documents/reports --organize --rename     # 分类 + 优化文件名
   %(prog)s ~/Documents/reports --summarize --model qwen3:8b  # 指定模型
   %(prog)s file1.pdf file2.pptx --convert --confirm    # 转换指定文件
   %(prog)s ~/Documents --preview --json                # JSON 格式预览
@@ -824,6 +841,8 @@ def main():
                         help="使用 Ollama 本地模型生成摘要（需先 --convert）")
     parser.add_argument("--organize", action="store_true",
                         help="三维度分类并生成软链接目录（需先 --summarize）")
+    parser.add_argument("--rename", action="store_true",
+                        help="软链接使用 AI 建议的优化文件名（配合 --organize）")
     parser.add_argument("--model", default=DEFAULT_MODEL,
                         help=f"Ollama 模型名称（默认: {DEFAULT_MODEL}）")
     parser.add_argument("--confirm", action="store_true", help="确认执行（安全机制）")
@@ -871,7 +890,8 @@ def main():
             print(f"❌ {err}")
             sys.exit(1)
 
-        converter.organize(model=args.model, use_json=args.json)
+        converter.organize(model=args.model, use_json=args.json,
+                           rename=args.rename)
 
 
 if __name__ == "__main__":
