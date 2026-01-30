@@ -349,12 +349,18 @@ class DocConverter:
 
             # 展示重复文件详情
             if duplicates:
+                dup_size = sum(d.file_size for d in duplicates)
                 print("")
-                print(f"⚠️  发现 {len(duplicates)} 个重复文件 (MD5 相同):")
+                print(f"⚠️  发现 {len(duplicates)} 个重复文件 (MD5 相同)，"
+                      f"可释放 {format_size(dup_size)}:")
                 for doc in duplicates:
                     dup_name = Path(doc.original_path).name
                     orig_name = Path(doc.duplicate_of).name
                     print(f"  - {dup_name} == {orig_name}  [{doc.md5[:8]}...]")
+                print("")
+                print("💡 建议删除重复文件，可运行:")
+                for doc in duplicates:
+                    print(f'  rm "{doc.original_path}"')
 
         return report
 
