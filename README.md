@@ -6,6 +6,20 @@ A collection of specialized agent skills designed for **non-coders** to handle m
 
 ## Skills
 
+### File Management (macOS)
+
+#### [file-master](./file-master)
+Mac file management master - a prompt-only orchestration skill that chains disk-cleaner, file-organizer, and doc-mindmap into a "Clean > Organize > Analyze" three-phase workflow.
+
+#### [disk-cleaner](./disk-cleaner)
+Smart Mac disk cleaning assistant powered by [Mole](https://github.com/tw93/Mole). Features three-tier cleanup strategies (Air/Pro/Max), whitelist protection, categorized reports, and achievement pages.
+
+#### [file-organizer](./file-organizer)
+Smart Mac file organizer focused on sorting office documents in the Downloads folder. Supports manual mode (Smart Folders) and auto mode (sort by type), with disk-cleaner whitelist integration.
+
+#### [doc-mindmap](./doc-mindmap)
+Document intelligence assistant - batch convert office documents to Markdown, generate summaries via local Ollama models, and create three-dimension symlink classification (topic/usage/client) with zero extra disk usage.
+
 ### Media Processing
 
 #### [pdf-to-images](./pdf-to-images)
@@ -19,20 +33,6 @@ Analyze SRT subtitle files to generate engaging, viral-potential video titles. O
 
 #### [youtube-downloader](./youtube-downloader)
 A powerful video downloader wrapping `yt-dlp`. Supports downloading videos, playlists, subtitles, and metadata from YouTube and 1000+ other sites.
-
-### File Management (macOS)
-
-#### [disk-cleaner](./disk-cleaner)
-Smart Mac disk cleaning assistant powered by [Mole](https://github.com/tw93/Mole). Features three-tier cleanup strategies (Air/Pro/Max), whitelist protection, categorized reports, and achievement pages.
-
-#### [file-organizer](./file-organizer)
-Smart Mac file organizer focused on sorting office documents in the Downloads folder. Supports manual mode (Smart Folders) and auto mode (sort by type), with disk-cleaner whitelist integration.
-
-#### [doc-mindmap](./doc-mindmap)
-Document intelligence assistant - batch convert office documents to Markdown, generate summaries via local Ollama models, and create three-dimension symlink classification (topic/usage/client) with zero extra disk usage.
-
-#### [file-master](./file-master)
-Mac file management master - a prompt-only orchestration skill that chains disk-cleaner, file-organizer, and doc-mindmap into a "Clean > Organize > Analyze" three-phase workflow.
 
 ## Prerequisites & Limitations
 
@@ -73,14 +73,14 @@ Each skill is contained in its own directory with a `SKILL.md` file defining its
 ```
 skills/
 ├── .claude-plugin/marketplace.json
+├── file-master/
+├── disk-cleaner/
+├── file-organizer/
+├── doc-mindmap/
 ├── pdf-to-images/
 ├── podcast-downloader/
 ├── srt-title-generator/
 ├── youtube-downloader/
-├── disk-cleaner/
-├── file-organizer/
-├── doc-mindmap/
-├── file-master/
 └── README.md
 ```
 
@@ -88,12 +88,12 @@ skills/
 
 These skills stand on the shoulders of giants:
 
+- **[Mole](https://github.com/tw93/Mole)** - Core engine for macOS system cleaning.
+- **[markitdown](https://github.com/microsoft/markitdown)** - Microsoft's document-to-Markdown converter.
+- **[Ollama](https://ollama.com/)** - Local LLM runtime for document summarization and classification.
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** - The backbone of our video downloading capabilities.
 - **[ImageMagick](https://imagemagick.org/)** - Powering our PDF to image conversion.
 - **[FFmpeg](https://ffmpeg.org/)** - Essential for high-quality audio extraction and video processing.
 - **[Requests](https://requests.readthedocs.io/)** & **[Feedparser](https://github.com/kurtmckee/feedparser)** - Reliable tools for API interaction and RSS parsing.
-- **[Mole](https://github.com/tw93/Mole)** - Core engine for macOS system cleaning.
-- **[markitdown](https://github.com/microsoft/markitdown)** - Microsoft's document-to-Markdown converter.
-- **[Ollama](https://ollama.com/)** - Local LLM runtime for document summarization and classification.
 
 We are grateful to the maintainers and contributors of these projects for their dedication to open-source software.
