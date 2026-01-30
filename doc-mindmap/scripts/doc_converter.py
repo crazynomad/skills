@@ -122,6 +122,22 @@ SUMMARY_USER_PROMPT = """请为以下文档内容生成一份简明的中文摘�
 # 摘要时截取的最大字符数，避免超出模型上下文
 MAX_CONTENT_CHARS = 8000
 
+CLASSIFY_SYSTEM_PROMPT = "你是文档分类助手。严格按要求的 JSON 格式输出，不要任何思考过程和多余文字。"
+
+CLASSIFY_USER_PROMPT = """请为以下文档摘要进行三维度分类。
+
+文档名: {filename}
+摘要内容:
+{brief}
+
+请从三个维度分类，每个维度只给出一个分类名（2-6个字）：
+1. 按主题: 文档核心主题（如：AI技术、数据治理、运维方案、营销策略）
+2. 按用途: 工作场景用途（如：培训材料、客户交付方案、售前方案、市场营销、内部参考）
+3. 按客户: 所属客户或适用对象（如：沃尔沃、一汽集团、通用方案、内部使用）
+
+严格按以下 JSON 格式输出，不要输出其他内容：
+{{"topic": "主题分类", "usage": "用途分类", "client": "客户分类"}}"""
+
 
 def check_ollama(model: str = DEFAULT_MODEL) -> tuple[bool, str]:
     """检查 Ollama 服务和模型是否可用"""
@@ -178,6 +194,44 @@ def ollama_summarize(content: str, filename: str, filetype: str,
     if not content and msg.get("thinking"):
         content = msg["thinking"].strip()
     return content
+
+
+def ollama_classify(brief: str, filename: str,
+                    model: str = DEFAULT_MODEL) -> dict:
+    """使用 Ollama 对文档进行三维度分类，返回 {topic, usage, client}"""
+    import requests
+
+    user_prompt = CLASSIFY_USER_PROMPT.format(filename=filename, brief=brief)
+
+    resp = requests.post(
+        f"{OLLAMA_API_URL}/api/chat",
+        json={
+            "model": model,
+            "messages": [
+                {"role": "system", "content": CLASSIFY_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            "stream": False,
+            "options": {"temperature": 0.1, "num_predict": 256},
+        },
+        timeout=60,
+    )
+    resp.raise_for_status()
+    msg = resp.json().get("message", {})
+    content = msg.get("content", "").strip()
+    if not content and msg.get("thinking"):
+        content = msg["thinking"].strip()
+
+    # 从返回内容中提取 JSON
+    try:
+        # 处理可能包含 ```json 代码块的情况
+        if "```" in content:
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        return json.loads(content.strip())
+    except (json.JSONDecodeError, IndexError):
+        return {"topic": "未分类", "usage": "未分类", "client": "未分类"}
 
 
 class DocConverter:
@@ -587,6 +641,138 @@ class DocConverter:
 
         return summary_result
 
+    def organize(self, model: str = DEFAULT_MODEL,
+                 use_json: bool = False) -> dict:
+        """读取摘要，用 Ollama 分类，通过软链接生成三套目录结构"""
+        summaries_dir = self._get_summaries_dir()
+        briefs_dir = os.path.join(summaries_dir, "briefs")
+        schemes_dir = os.path.join(summaries_dir, "schemes")
+
+        if not os.path.isdir(briefs_dir):
+            msg = f"摘要目录不存在: {briefs_dir}，请先运行 --summarize"
+            if use_json:
+                print(json.dumps({"error": msg}, ensure_ascii=False))
+            else:
+                print(f"❌ {msg}")
+            return {"error": msg}
+
+        brief_files = sorted(Path(briefs_dir).glob("*.brief.md"))
+        if not brief_files:
+            msg = "没有找到摘要文件"
+            if use_json:
+                print(json.dumps({"error": msg}, ensure_ascii=False))
+            else:
+                print(f"ℹ️  {msg}")
+            return {"error": msg}
+
+        # 收集原始文件路径映射（brief stem 如 "DMS.pptx" -> 原始路径）
+        if not self.documents:
+            self.scan()
+        orig_map: dict[str, str] = {}
+        for doc in self.documents:
+            # brief 文件名格式: {stem}{ext}.brief.md，stem 对应 {name}{ext}
+            key = Path(doc.original_path).stem + doc.file_type
+            orig_map[key] = doc.original_path
+
+        if not use_json:
+            print(f"🗂️  使用模型 {model} 进行三维度分类...")
+            print(f"📁 分类输出: {schemes_dir}")
+            print(f"📄 待分类: {len(brief_files)} 个文件")
+            print("")
+
+        # 分类结果: [{filename, original_path, topic, usage, client}, ...]
+        classifications = []
+
+        for i, bf in enumerate(brief_files, 1):
+            # brief stem: "DMS.pptx"  (从 "DMS.pptx.brief.md" 去掉 ".brief")
+            doc_key = bf.stem.replace(".brief", "")
+            orig_path = orig_map.get(doc_key, "")
+
+            if not use_json:
+                print(f"  [{i}/{len(brief_files)}] 分类: {doc_key}...",
+                      end=" ", flush=True)
+
+            try:
+                brief_content = bf.read_text(encoding="utf-8")
+                cats = ollama_classify(brief_content, doc_key, model)
+                cats["filename"] = doc_key
+                cats["original_path"] = orig_path
+                classifications.append(cats)
+
+                if not use_json:
+                    print(f"✅ 主题:{cats.get('topic','')} | "
+                          f"用途:{cats.get('usage','')} | "
+                          f"客户:{cats.get('client','')}")
+            except Exception as e:
+                classifications.append({
+                    "filename": doc_key, "original_path": orig_path,
+                    "topic": "未分类", "usage": "未分类", "client": "未分类",
+                })
+                if not use_json:
+                    print(f"❌ {e}")
+
+        # 创建三套软链接目录
+        scheme_names = {
+            "by-topic": "topic",
+            "by-usage": "usage",
+            "by-client": "client",
+        }
+        scheme_labels = {
+            "by-topic": "按主题",
+            "by-usage": "按用途",
+            "by-client": "按客户",
+        }
+
+        # 清理旧的 schemes 目录
+        import shutil
+        if os.path.exists(schemes_dir):
+            shutil.rmtree(schemes_dir)
+
+        link_count = 0
+        for scheme_dir, cat_key in scheme_names.items():
+            for item in classifications:
+                if not item["original_path"]:
+                    continue
+                category = item.get(cat_key, "未分类")
+                cat_dir = os.path.join(schemes_dir, scheme_dir, category)
+                os.makedirs(cat_dir, exist_ok=True)
+
+                src = os.path.abspath(item["original_path"])
+                dst = os.path.join(cat_dir, Path(src).name)
+                if not os.path.exists(dst):
+                    os.symlink(src, dst)
+                    link_count += 1
+
+        if not use_json:
+            print("")
+            print(f"✅ 分类完成，共创建 {link_count} 个软链接")
+            print(f"📁 分类目录: {schemes_dir}")
+            print("")
+            for scheme_dir, cat_key in scheme_names.items():
+                label = scheme_labels[scheme_dir]
+                scheme_path = os.path.join(schemes_dir, scheme_dir)
+                if os.path.isdir(scheme_path):
+                    cats = sorted(os.listdir(scheme_path))
+                    print(f"  🗂️  {label} ({scheme_dir}/)")
+                    for cat in cats:
+                        cat_path = os.path.join(scheme_path, cat)
+                        count = len(os.listdir(cat_path))
+                        print(f"      📁 {cat}/ ({count} 个)")
+                    print("")
+        else:
+            print(json.dumps({
+                "model": model,
+                "schemes_dir": schemes_dir,
+                "total_links": link_count,
+                "classifications": classifications,
+            }, indent=2, ensure_ascii=False))
+
+        return {
+            "schemes_dir": schemes_dir,
+            "total_links": link_count,
+            "classifications": classifications,
+        }
+
     def _write_csv(self, csv_path: str):
         """写入 CSV 索引"""
         fieldnames = [
@@ -622,6 +808,7 @@ def main():
   %(prog)s ~/Documents/reports --preview              # 预览文档列表
   %(prog)s ~/Documents/reports --convert --confirm     # 执行转换
   %(prog)s ~/Documents/reports --summarize             # 用 Ollama 生成摘要
+  %(prog)s ~/Documents/reports --organize              # 三维度分类 + 软链接
   %(prog)s ~/Documents/reports --summarize --model qwen3:8b  # 指定模型
   %(prog)s file1.pdf file2.pptx --convert --confirm    # 转换指定文件
   %(prog)s ~/Documents --preview --json                # JSON 格式预览
@@ -635,6 +822,8 @@ def main():
     parser.add_argument("--convert", action="store_true", help="执行转换")
     parser.add_argument("--summarize", action="store_true",
                         help="使用 Ollama 本地模型生成摘要（需先 --convert）")
+    parser.add_argument("--organize", action="store_true",
+                        help="三维度分类并生成软链接目录（需先 --summarize）")
     parser.add_argument("--model", default=DEFAULT_MODEL,
                         help=f"Ollama 模型名称（默认: {DEFAULT_MODEL}）")
     parser.add_argument("--confirm", action="store_true", help="确认执行（安全机制）")
@@ -642,7 +831,7 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.preview and not args.convert and not args.summarize:
+    if not args.preview and not args.convert and not args.summarize and not args.organize:
         parser.print_help()
         return
 
@@ -674,6 +863,15 @@ def main():
             sys.exit(1)
 
         converter.summarize(model=args.model, use_json=args.json)
+
+    if args.organize:
+        # 检查 Ollama
+        ok, err = check_ollama(args.model)
+        if not ok:
+            print(f"❌ {err}")
+            sys.exit(1)
+
+        converter.organize(model=args.model, use_json=args.json)
 
 
 if __name__ == "__main__":
