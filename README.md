@@ -50,21 +50,9 @@ All scripts assume a working **Python 3.10+** environment.
 
 These skills are structured for use with Claude Code or similar agentic environments.
 
-### Claude Code Installation
+### Installation
 
-Register this repository as a plugin source:
-
-```bash
-/plugin marketplace add burn.wang/skills
-```
-*(Note: Replace `burn.wang/skills` with your actual git repository URL or identifier if different)*
-
-Or install skill groups directly:
-
-```bash
-/plugin install media-skills@burn.wang/skills
-/plugin install file-master@burn.wang/skills
-```
+Visit **https://skills.sh/docs** for the recommended installation guide.
 
 ## Structure
 

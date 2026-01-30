@@ -50,21 +50,9 @@ Mac 智能文件整理助手，专注整理下载文件夹中的办公文档。�
 
 这些技能专为 Claude Code 或类似 Agent 环境设计。
 
-### Claude Code 安装
+### 安装
 
-注册本仓库为插件源：
-
-```bash
-/plugin marketplace add burn.wang/skills
-```
-*（注：请将 `burn.wang/skills` 替换为实际的仓库地址）*
-
-或直接安装技能组：
-
-```bash
-/plugin install media-skills@burn.wang/skills
-/plugin install file-master@burn.wang/skills
-```
+请访问 **https://skills.sh/docs** 获取推荐的安装指南。
 
 ## 目录结构
 
