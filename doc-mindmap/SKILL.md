@@ -185,11 +185,27 @@ python doc-mindmap/scripts/doc_converter.py <路径> --organize
 
 三套分类方案通过软链接同时存在于 `.summaries/schemes/` 下，零额外磁盘占用。
 
-### 第 5 步：生成思维导图
+### 第 5 步：预览分类结果
+
+询问用户是否要在 Finder 中预览分类目录。如果用户同意：
+
+1. 将 schemes 目录复制到桌面（保留软链接）：
+```bash
+cp -a <.summaries/schemes> ~/Desktop/文档分类-$(date +%Y%m%d)
+```
+
+2. 用 Finder 打开：
+```bash
+open ~/Desktop/文档分类-$(date +%Y%m%d)
+```
+
+用户可以在 Finder 中直观浏览三种分类方案，双击软链接即可打开原始文件。
+
+### 第 6 步：生成思维导图
 
 读取 `.summaries/briefs/` 下的摘要文件，生成 `.summaries/mindmap.md` 思维导图分类文件。
 
-### 第 6 步：展示结果
+### 第 7 步：展示结果
 
 向用户展示：
 1. 转换统计（成功/失败/跳过重复）
