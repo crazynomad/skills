@@ -1,28 +1,48 @@
 # Skills for Non-Coder
 
-This repository contains a collection of specialized agent skills designed specifically for **non-coders** to handle media and content processing tasks. These skills allow anyone to perform complex operations related to audio, video, and document manipulation through simple AI instructions.
+[English](./README.md) | [中文](./README_CN.md)
+
+A collection of specialized agent skills designed for **non-coders** to handle media, content processing, and file management tasks. Perform complex operations through simple AI instructions.
 
 ## Skills
 
-### [pdf-to-images](./pdf-to-images)
+### Media Processing
+
+#### [pdf-to-images](./pdf-to-images)
 Convert PDF files into a series of high-quality images (PNG/JPG) using ImageMagick. Useful for extracting slides or creating previews.
 
-### [podcast-downloader](./podcast-downloader)
+#### [podcast-downloader](./podcast-downloader)
 Download podcast episodes efficiently from Apple Podcasts. Features iTunes API integration for speed, with robust RSS fallback and metadata extraction.
 
-### [srt-title-generator](./srt-title-generator)
-Analyze SRT subtitle files to generate engaging, viral-potential video titles. Optimized for platforms like YouTube, Bilibili, and Little Red Book (Xiaohongshu).
+#### [srt-title-generator](./srt-title-generator)
+Analyze SRT subtitle files to generate engaging, viral-potential video titles. Optimized for platforms like YouTube, Bilibili, and Xiaohongshu.
 
-### [youtube-downloader](./youtube-downloader)
+#### [youtube-downloader](./youtube-downloader)
 A powerful video downloader wrapping `yt-dlp`. Supports downloading videos, playlists, subtitles, and metadata from YouTube and 1000+ other sites.
+
+### File Management (macOS)
+
+#### [disk-cleaner](./disk-cleaner)
+Smart Mac disk cleaning assistant powered by [Mole](https://github.com/tw93/Mole). Features three-tier cleanup strategies (Air/Pro/Max), whitelist protection, categorized reports, and achievement pages.
+
+#### [file-organizer](./file-organizer)
+Smart Mac file organizer focused on sorting office documents in the Downloads folder. Supports manual mode (Smart Folders) and auto mode (sort by type), with disk-cleaner whitelist integration.
+
+#### [doc-mindmap](./doc-mindmap)
+Document intelligence assistant - batch convert office documents to Markdown, generate summaries via local Ollama models, and create three-dimension symlink classification (topic/usage/client) with zero extra disk usage.
+
+#### [file-master](./file-master)
+Mac file management master - a prompt-only orchestration skill that chains disk-cleaner, file-organizer, and doc-mindmap into a "Clean > Organize > Analyze" three-phase workflow.
 
 ## Prerequisites & Limitations
 
 While most skills are cross-platform, some have specific system requirements:
 
-- **disk-cleaner**: ⚠️ **macOS Only**. This skill relies on the `mole` CLI tool which is designed for macOS system cleaning.
-- **pdf-to-images**: Requires **[ImageMagick](https://imagemagick.org/)** to be installed on the system.
-- **youtube-downloader**: Requires **[FFmpeg](https://ffmpeg.org/)** for audio extraction and format merging.
+- **disk-cleaner / file-organizer / file-master**: **macOS Only**
+- **disk-cleaner**: Requires [Mole](https://github.com/tw93/Mole) (`brew install tw93/tap/mole`)
+- **doc-mindmap**: Requires [markitdown](https://github.com/microsoft/markitdown) (`pip install 'markitdown[all]'`) and optionally [Ollama](https://ollama.com/) for summaries
+- **pdf-to-images**: Requires [ImageMagick](https://imagemagick.org/)
+- **youtube-downloader**: Requires [FFmpeg](https://ffmpeg.org/) for audio extraction
 
 All scripts assume a working **Python 3.10+** environment.
 
@@ -32,31 +52,48 @@ These skills are structured for use with Claude Code or similar agentic environm
 
 ### Claude Code Installation
 
-You can register this repository as a plugin source:
+Register this repository as a plugin source:
 
 ```bash
 /plugin marketplace add burn.wang/skills
 ```
 *(Note: Replace `burn.wang/skills` with your actual git repository URL or identifier if different)*
 
-Or install the media skills group directly:
+Or install skill groups directly:
 
 ```bash
 /plugin install media-skills@burn.wang/skills
+/plugin install file-master@burn.wang/skills
 ```
 
 ## Structure
 
 Each skill is contained in its own directory with a `SKILL.md` file defining its interface, usage, and dependencies.
 
+```
+skills/
+├── .claude-plugin/marketplace.json
+├── pdf-to-images/
+├── podcast-downloader/
+├── srt-title-generator/
+├── youtube-downloader/
+├── disk-cleaner/
+├── file-organizer/
+├── doc-mindmap/
+├── file-master/
+└── README.md
+```
+
 ## Acknowledgements
 
-These skills stand on the shoulders of giants. We would like to thank the following open-source projects that make these automation tasks possible:
+These skills stand on the shoulders of giants:
 
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** - The backbone of our video downloading capabilities.
 - **[ImageMagick](https://imagemagick.org/)** - Powering our PDF to image conversion.
 - **[FFmpeg](https://ffmpeg.org/)** - Essential for high-quality audio extraction and video processing.
 - **[Requests](https://requests.readthedocs.io/)** & **[Feedparser](https://github.com/kurtmckee/feedparser)** - Reliable tools for API interaction and RSS parsing.
-- **[Mole](https://github.com/tw93/mole)** - Inspiration and core logic for system cleaning tasks.
+- **[Mole](https://github.com/tw93/Mole)** - Core engine for macOS system cleaning.
+- **[markitdown](https://github.com/microsoft/markitdown)** - Microsoft's document-to-Markdown converter.
+- **[Ollama](https://ollama.com/)** - Local LLM runtime for document summarization and classification.
 
 We are grateful to the maintainers and contributors of these projects for their dedication to open-source software.
