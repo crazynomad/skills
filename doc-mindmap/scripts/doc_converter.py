@@ -8,6 +8,7 @@ Doc Converter - 批量文档转 Markdown 工具
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import sys
@@ -45,6 +46,9 @@ class DocInfo:
     file_type: str
     file_size: int
     file_size_human: str = ""
+    md5: str = ""
+    is_duplicate: bool = False
+    duplicate_of: str = ""
     markdown_path: str = ""
     conversion_status: str = "pending"
     error_message: str = ""
@@ -217,6 +221,7 @@ class DocConverter:
 
         # 按文件大小降序排序
         self.documents.sort(key=lambda d: d.file_size, reverse=True)
+        self._detect_duplicates()
         return self.documents
 
     def _scan_dir(self, directory: Path):
@@ -248,8 +253,28 @@ class DocConverter:
             file_type=ext,
             file_size=size,
             file_size_human=format_size(size),
+            md5=self._file_md5(path),
         )
         self.documents.append(doc)
+
+    @staticmethod
+    def _file_md5(path: Path) -> str:
+        """计算文件 MD5"""
+        h = hashlib.md5()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    def _detect_duplicates(self):
+        """通过 MD5 检测重复文件"""
+        seen: dict[str, str] = {}  # md5 -> first file path
+        for doc in self.documents:
+            if doc.md5 in seen:
+                doc.is_duplicate = True
+                doc.duplicate_of = seen[doc.md5]
+            else:
+                seen[doc.md5] = doc.original_path
 
     def preview(self, use_json: bool = False) -> ConvertReport:
         """预览模式：列出将要转换的文档"""
@@ -266,12 +291,16 @@ class DocConverter:
         )
         report.total_size_human = format_size(report.total_size_bytes)
 
+        # 重复文件统计
+        duplicates = [d for d in self.documents if d.is_duplicate]
+
         if use_json:
             print(json.dumps({
                 "scan_time": report.scan_time,
                 "source_paths": report.source_paths,
                 "total_files": report.total_files,
                 "total_size": report.total_size_human,
+                "duplicates": len(duplicates),
                 "summaries_dir": report.summaries_dir,
                 "documents": [
                     {
@@ -279,6 +308,9 @@ class DocConverter:
                         "type": d.file_type,
                         "size": d.file_size_human,
                         "size_bytes": d.file_size,
+                        "md5": d.md5,
+                        "is_duplicate": d.is_duplicate,
+                        "duplicate_of": d.duplicate_of,
                     }
                     for d in self.documents
                 ],
@@ -312,7 +344,17 @@ class DocConverter:
                 for i, doc in enumerate(self.documents, 1):
                     icon = type_icons.get(doc.file_type, "📄")
                     name = Path(doc.original_path).name
-                    print(f"  {i:3d}. {icon} {name} ({doc.file_size_human})")
+                    dup_tag = " ⚠️ 重复" if doc.is_duplicate else ""
+                    print(f"  {i:3d}. {icon} {name} ({doc.file_size_human}){dup_tag}")
+
+            # 展示重复文件详情
+            if duplicates:
+                print("")
+                print(f"⚠️  发现 {len(duplicates)} 个重复文件 (MD5 相同):")
+                for doc in duplicates:
+                    dup_name = Path(doc.original_path).name
+                    orig_name = Path(doc.duplicate_of).name
+                    print(f"  - {dup_name} == {orig_name}  [{doc.md5[:8]}...]")
 
         return report
 
@@ -368,6 +410,13 @@ class DocConverter:
 
             if not use_json:
                 print(f"  [{i}/{report.total_files}] 转换: {Path(doc.original_path).name}...", end=" ")
+
+            # 跳过重复文件
+            if doc.is_duplicate:
+                doc.conversion_status = "skipped_duplicate"
+                if not use_json:
+                    print(f"⏭️  重复 (同 {Path(doc.duplicate_of).name})")
+                continue
 
             try:
                 result = md_converter.convert(doc.original_path)
@@ -536,7 +585,8 @@ class DocConverter:
         """写入 CSV 索引"""
         fieldnames = [
             "original_path", "markdown_path", "file_type",
-            "file_size", "conversion_status", "error_message", "converted_at",
+            "file_size", "md5", "is_duplicate", "duplicate_of",
+            "conversion_status", "error_message", "converted_at",
         ]
 
         with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
@@ -548,6 +598,9 @@ class DocConverter:
                     "markdown_path": doc.markdown_path,
                     "file_type": doc.file_type,
                     "file_size": doc.file_size,
+                    "md5": doc.md5,
+                    "is_duplicate": doc.is_duplicate,
+                    "duplicate_of": doc.duplicate_of,
                     "conversion_status": doc.conversion_status,
                     "error_message": doc.error_message,
                     "converted_at": doc.converted_at,
