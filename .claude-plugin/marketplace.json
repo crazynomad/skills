@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "media-skills",
-      "description": "Media processing skills: video/podcast downloading, PDF to image conversion, and subtitle-based title generation",
+      "description": "Media processing skills: download videos from YouTube and 1000+ sites, download Apple Podcasts episodes, convert PDFs to images, and generate viral video titles from subtitles",
       "source": "./",
       "strict": false,
       "skills": [
@@ -23,7 +23,7 @@
     },
     {
       "name": "file-skills",
-      "description": "macOS file management skills: disk cleaning, file organizing, document intelligence, and a unified orchestration workflow",
+      "description": "macOS file management skills: free 100GB+ disk space with safe cleanup, organize 1000+ files with Smart Folders, convert office documents to a searchable knowledge base, and orchestrate all three in one workflow",
       "source": "./",
       "strict": false,
       "skills": [

@@ -4,6 +4,13 @@ English | [中文](./README.zh.md)
 
 A collection of specialized agent skills designed for **non-coders** to handle media, content processing, and file management tasks. Perform complex operations through simple AI instructions.
 
+## Video Tutorials
+
+| Video | Skills Covered | Duration |
+|-------|---------------|----------|
+| [Turn 4000+ PPTs into a Personal Knowledge Base](https://youtu.be/lGRbMZw23ic) | disk-cleaner, file-organizer, doc-mindmap | 17:30 |
+| [Vibe Coding Challenge: Building a Podcast Downloader](https://youtu.be/zaj9ouF7VFQ) | podcast-downloader | 10:55 |
+
 ## Prerequisites
 
 - Python 3.10+ environment
@@ -65,7 +72,7 @@ Skills are organized into three categories:
 
 #### file-master
 
-Mac file management master - a prompt-only orchestration skill that chains disk-cleaner, file-organizer, and doc-mindmap into a **Clean > Organize > Analyze** three-phase workflow.
+Mac file management master - a prompt-only orchestration skill that chains disk-cleaner, file-organizer, and doc-mindmap into a **Clean > Organize > Analyze** three-phase workflow. In a real-world demo, this workflow freed 120GB of disk space, organized 1,600+ files, and converted 4,000+ PPTs into a searchable knowledge base. ([Watch the full walkthrough](https://youtu.be/lGRbMZw23ic))
 
 Three phases:
 | Phase | Name | Description |
@@ -78,7 +85,7 @@ Three phases:
 
 #### disk-cleaner
 
-Smart Mac disk cleaning assistant powered by [Mole](https://github.com/tw93/Mole). Features three-tier cleanup strategies, whitelist protection, categorized reports, and achievement pages.
+Smart Mac disk cleaning assistant powered by [Mole](https://github.com/tw93/Mole). Features three-tier cleanup strategies, whitelist protection, categorized reports, and achievement pages. In a real-world test, it freed over 106GB of disk space across browser caches, app caches, system logs, and package manager artifacts.
 
 ```bash
 # Check environment
@@ -111,7 +118,7 @@ python disk-cleaner/scripts/mole_cleaner.py --whitelist --preset office
 
 #### file-organizer
 
-Smart Mac file organizer focused on sorting office documents in the Downloads folder. Supports manual mode (Smart Folders) and auto mode (sort by type), with disk-cleaner whitelist integration.
+Smart Mac file organizer focused on sorting office documents in the Downloads folder. Supports manual mode (Smart Folders) and auto mode (sort by type), with disk-cleaner whitelist integration. Built on macOS native capabilities (Finder Smart Folders + Spotlight), so files stay in place - no vendor lock-in. Tested with 1,600+ files in a single Downloads folder.
 
 ```bash
 # Manual mode - create smart folders
@@ -143,7 +150,7 @@ python file-organizer/scripts/file_organizer.py --large-files --min-size 500
 
 #### doc-mindmap
 
-Document intelligence assistant - batch convert office documents to Markdown, generate summaries via local Ollama models, and create three-dimension symlink classification (topic/usage/client) with zero extra disk usage.
+Document intelligence assistant - batch convert office documents to Markdown, generate summaries via local Ollama models, and create three-dimension symlink classification (topic/usage/client) with zero extra disk usage. All AI processing runs locally via Ollama - your documents never leave your machine. Tested with 4,000+ PPTs and 14,000+ PDFs.
 
 ```bash
 # Preview documents + duplicate detection
@@ -201,7 +208,7 @@ python pdf-to-images/scripts/pdf_to_images.py "document.pdf" -f jpg -q 90
 
 #### podcast-downloader
 
-Download podcast episodes efficiently from Apple Podcasts. Features iTunes API integration for speed, with robust RSS fallback and metadata extraction.
+Download podcast episodes efficiently from Apple Podcasts. Features iTunes API integration for speed, with robust RSS fallback and metadata extraction. Born from a [Vibe Coding challenge](https://youtu.be/zaj9ouF7VFQ) - built in 3 rounds of AI-assisted development using Claude, Gemini, and NotebookLM to reverse-engineer Apple's podcast API.
 
 ```bash
 # Download a single episode

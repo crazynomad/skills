@@ -4,6 +4,13 @@
 
 **所有人都用得到**的 Agent 技能合集，涵盖媒体处理、内容加工和文件管理。通过简单的 AI 指令即可完成复杂操作。
 
+## 视频教程
+
+| 视频 | 涉及技能 | 时长 |
+|------|----------|------|
+| [0 基础 AI 挑战：4000+ 份 PPT 变身个人知识库](https://youtu.be/lGRbMZw23ic) | disk-cleaner, file-organizer, doc-mindmap | 17:30 |
+| [Vibe Coding 极限挑战：两句话写出播客下载 Skills](https://youtu.be/zaj9ouF7VFQ) | podcast-downloader | 10:55 |
+
 ## 前置要求
 
 - Python 3.10+ 环境
@@ -65,7 +72,7 @@ npx skills add crazynomad/skills
 
 #### file-master
 
-Mac 文件管理大师 - 纯提示编排技能，将 disk-cleaner、file-organizer、doc-mindmap 串成 **「清 → 理 → 知」** 三阶段工作流，一次搞定 Mac 文件管理。
+Mac 文件管理大师 - 纯提示编排技能，将 disk-cleaner、file-organizer、doc-mindmap 串成 **「清 → 理 → 知」** 三阶段工作流，一次搞定 Mac 文件管理。实测释放 120GB 磁盘空间、整理 1600+ 文件、将 4000+ 份 PPT 转为可检索知识库。（[观看完整演示](https://youtu.be/lGRbMZw23ic)）
 
 三个阶段：
 | 阶段 | 名称 | 说明 |
@@ -78,7 +85,7 @@ Mac 文件管理大师 - 纯提示编排技能，将 disk-cleaner、file-organiz
 
 #### disk-cleaner
 
-Mac 智能磁盘清理助手，基于 [Mole](https://github.com/tw93/Mole) 打造。支持三档清理策略、白名单保护、分类报告和成就页面。
+Mac 智能磁盘清理助手，基于 [Mole](https://github.com/tw93/Mole) 打造。支持三档清理策略、白名单保护、分类报告和成就页面。实测清理浏览器缓存、应用缓存、系统日志、包管理器等，释放超过 106GB 磁盘空间。
 
 ```bash
 # 检查环境
@@ -111,7 +118,7 @@ python disk-cleaner/scripts/mole_cleaner.py --whitelist --preset office
 
 #### file-organizer
 
-Mac 智能文件整理助手，专注整理下载文件夹中的办公文档。支持手动模式（智能文件夹）和自动模式（按类型分类），与 disk-cleaner 白名单联动。
+Mac 智能文件整理助手，专注整理下载文件夹中的办公文档。支持手动模式（智能文件夹）和自动模式（按类型分类），与 disk-cleaner 白名单联动。基于 macOS 原生能力（Finder 智能文件夹 + Spotlight），文件原地不动、无厂商锁定。实测整理 1600+ 文件。
 
 ```bash
 # 手动模式 - 创建智能文件夹
@@ -143,7 +150,7 @@ python file-organizer/scripts/file_organizer.py --large-files --min-size 500
 
 #### doc-mindmap
 
-文档智能整理助手 - 批量转换办公文档为 Markdown，通过本地 Ollama 模型生成摘要，三维度软链接分类（主题/用途/客户），零额外磁盘占用。
+文档智能整理助手 - 批量转换办公文档为 Markdown，通过本地 Ollama 模型生成摘要，三维度软链接分类（主题/用途/客户），零额外磁盘占用。所有 AI 处理通过 Ollama 在本地运行，文档不会离开你的电脑。实测处理 4000+ 份 PPT 和 14000+ 份 PDF。
 
 ```bash
 # 预览文档 + 重复检测
@@ -201,7 +208,7 @@ python pdf-to-images/scripts/pdf_to_images.py "document.pdf" -f jpg -q 90
 
 #### podcast-downloader
 
-高效下载 Apple Podcasts 播客节目。支持 iTunes API 快速查询，内置 RSS 回退机制和元数据提取。
+高效下载 Apple Podcasts 播客节目。支持 iTunes API 快速查询，内置 RSS 回退机制和元数据提取。诞生于一场 [Vibe Coding 挑战](https://youtu.be/zaj9ouF7VFQ) — 通过 Claude、Gemini、NotebookLM 三回合 AI 协作，逆向工程 Apple 播客 API 而成。
 
 ```bash
 # 下载单集
