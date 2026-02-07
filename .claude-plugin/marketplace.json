@@ -1,17 +1,17 @@
 {
-  "name": "media-agent-skills",
+  "name": "noncoder-skills",
   "owner": {
     "name": "Burn Wang",
     "email": "burn.wang@example.com"
   },
   "metadata": {
-    "description": "Media processing agent skills for non-coders",
-    "version": "1.0.0"
+    "description": "Agent skills for non-coders: media processing and file management",
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "media-skills",
-      "description": "Collection of media processing skills including video downloading, podcast downloading, PDF to image conversion, and subtitle title generation",
+      "description": "Media processing skills: video/podcast downloading, PDF to image conversion, and subtitle-based title generation",
       "source": "./",
       "strict": false,
       "skills": [
@@ -22,21 +22,15 @@
       ]
     },
     {
-      "name": "doc-mindmap",
-      "description": "Document intelligence assistant - batch convert office documents to Markdown, generate summaries and mindmap classification",
+      "name": "file-skills",
+      "description": "macOS file management skills: disk cleaning, file organizing, document intelligence, and a unified orchestration workflow",
       "source": "./",
       "strict": false,
       "skills": [
+        "./file-master",
+        "./disk-cleaner",
+        "./file-organizer",
         "./doc-mindmap"
-      ]
-    },
-    {
-      "name": "file-master",
-      "description": "Mac file management master - orchestrates disk cleaning, file organizing, and document analysis in a unified workflow",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./file-master"
       ]
     }
   ]

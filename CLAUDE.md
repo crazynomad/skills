@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a collection of Claude Code skills for non-coders, focused on media and content processing tasks. Skills are standalone tools that can be invoked by Claude Code to perform specific operations.
+This is a collection of Claude Code skills for non-coders, covering media processing and file management tasks. Skills are standalone tools that can be invoked by Claude Code to perform specific operations.
 
 ## Repository Structure
 
@@ -28,15 +28,16 @@ Each skill follows the pattern:
 
 ## Available Skills
 
-| Skill | Script | Dependencies |
-|-------|--------|--------------|
-| pdf-to-images | `scripts/pdf_to_images.py` | ImageMagick (`brew install imagemagick`) |
-| podcast-downloader | `scripts/download_podcast.py` | `pip install requests feedparser` |
-| youtube-downloader | `scripts/download_video.py` | `pip install yt-dlp`, ffmpeg for audio |
-| disk-cleaner | `scripts/mole_cleaner.py` | Mole (`brew install tw93/tap/mole`) |
-| file-organizer | `scripts/file_organizer.py` | macOS only, no extra deps |
-| srt-title-generator | No script (prompt-based) | None |
-| doc-mindmap | `scripts/doc_converter.py` | `pip install 'markitdown[all]'` |
+| Plugin | Skill | Script | Dependencies |
+|--------|-------|--------|--------------|
+| media-skills | pdf-to-images | `scripts/pdf_to_images.py` | ImageMagick (`brew install imagemagick`) |
+| media-skills | podcast-downloader | `scripts/download_podcast.py` | `pip install requests feedparser` |
+| media-skills | youtube-downloader | `scripts/download_video.py` | `pip install yt-dlp`, ffmpeg for audio |
+| media-skills | srt-title-generator | No script (prompt-based) | None |
+| file-skills | file-master | No script (prompt-based orchestrator) | All file-skills deps |
+| file-skills | disk-cleaner | `scripts/mole_cleaner.py` | Mole (`brew install tw93/tap/mole`) |
+| file-skills | file-organizer | `scripts/file_organizer.py` | macOS only, no extra deps |
+| file-skills | doc-mindmap | `scripts/doc_converter.py` | `pip install 'markitdown[all]'` |
 
 ## Creating New Skills
 
@@ -48,7 +49,8 @@ Each skill follows the pattern:
    - Dependencies section
    - Output structure documentation
 3. Add implementation in `scripts/` directory
-4. Update `.claude-plugin/marketplace.json` to include the new skill path
+4. Update `.claude-plugin/marketplace.json` to include the new skill path in the appropriate plugin group
+5. Update `README.md` and `README.zh.md` to document the new skill
 
 ## Skill Interface Pattern
 
@@ -87,4 +89,11 @@ python doc-mindmap/scripts/doc_converter.py ~/Documents/test-docs --convert --co
 
 ## Plugin Registration
 
-Skills are registered in `.claude-plugin/marketplace.json`. The `plugins[].skills` array lists skill directory paths. When adding a new skill, add its path here to make it discoverable. Note: `disk-cleaner`, `file-organizer`, and `doc-mindmap` are standalone skills not bundled in the `media-skills` plugin group.
+Skills are registered in `.claude-plugin/marketplace.json` (marketplace name: `noncoder-skills`). Two plugin groups:
+- `media-skills`: pdf-to-images, podcast-downloader, srt-title-generator, youtube-downloader
+- `file-skills`: file-master, disk-cleaner, file-organizer, doc-mindmap
+
+When adding or updating a skill, **always update all three files together**:
+1. `.claude-plugin/marketplace.json` - add skill path to the appropriate plugin group
+2. `README.md` - English documentation
+3. `README.zh.md` - Chinese documentation
