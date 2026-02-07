@@ -21,10 +21,12 @@ Each skill follows the pattern:
 - `SKILL.md`: YAML frontmatter (name, description) + usage documentation
 - `scripts/`: Python scripts that implement the skill functionality
 
+Two skills are **prompt-based** (no scripts): `srt-title-generator` uses Claude's own analysis, and `file-master` orchestrates other skills via prompt chaining.
+
 ## Requirements
 
 - Python 3.10+
-- macOS for `disk-cleaner` and `file-organizer` (system-specific tools)
+- macOS for `disk-cleaner`, `file-organizer`, and `file-master` (system-specific tools)
 
 ## Available Skills
 
@@ -79,8 +81,8 @@ python disk-cleaner/scripts/mole_cleaner.py --preview
 python disk-cleaner/scripts/mole_cleaner.py --clean --confirm
 
 # File organizer (Downloads folder only by default)
-python file-organizer/scripts/file_organizer.py --preview
-python file-organizer/scripts/file_organizer.py --organize --confirm
+python file-organizer/scripts/file_organizer.py --auto --dry-run
+python file-organizer/scripts/file_organizer.py --auto
 
 # Doc mindmap
 python doc-mindmap/scripts/doc_converter.py ~/Documents/test-docs --preview
