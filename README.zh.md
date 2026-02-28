@@ -59,7 +59,7 @@ npx skills add crazynomad/skills
 
 | 插件 | 说明 | 包含技能 |
 |------|------|----------|
-| **media-skills** | 视频/播客下载、PDF 转换、标题生成 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [youtube-downloader](#youtube-downloader) |
+| **media-skills** | 视频/播客下载、PDF 转换、标题生成 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [twitter-downloader](#twitter-downloader), [youtube-downloader](#youtube-downloader) |
 | **file-skills** | macOS 磁盘清理、文件整理、文档智能 | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 
 更多详情请访问 **https://skills.sh/docs**。
@@ -245,6 +245,32 @@ python podcast-downloader/scripts/download_podcast.py "PODCAST_URL" -n 10 -o ./p
 | 抖音 | 最多 55 字符 |
 
 **依赖**：无（纯提示技能）
+
+#### twitter-downloader
+
+基于 `twmd` 的 X / Twitter 视频下载工具，无需 API Key，下载单条推文中的视频。
+
+```bash
+# 下载推文视频
+python twitter-downloader/scripts/download_tweet.py "https://x.com/username/status/1234567890"
+
+# 指定输出目录
+python twitter-downloader/scripts/download_tweet.py "URL" -o ~/Downloads/twitter
+
+# 只打印视频 URL（不下载）
+python twitter-downloader/scripts/download_tweet.py "URL" --url-only
+```
+
+**选项**：
+| 选项 | 说明 | 默认值 |
+|------|------|--------|
+| `url` | X/Twitter 帖子 URL（必填） | - |
+| `-o, --output` | 输出目录 | 当前目录 |
+| `-s, --size` | 视频尺寸：small、normal、large | large |
+| `--url-only` | 只打印视频 URL，不下载 | - |
+| `--cookies` | twmd cookies JSON 路径（私密内容） | - |
+
+**依赖**：[yt-dlp](https://github.com/yt-dlp/yt-dlp)：`pip install yt-dlp`
 
 #### youtube-downloader
 

@@ -59,7 +59,7 @@ Simply tell Claude Code:
 
 | Plugin | Description | Skills |
 |--------|-------------|--------|
-| **media-skills** | Video/podcast downloading, PDF conversion, title generation | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [youtube-downloader](#youtube-downloader) |
+| **media-skills** | Video/podcast downloading, PDF conversion, title generation | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [twitter-downloader](#twitter-downloader), [youtube-downloader](#youtube-downloader) |
 | **file-skills** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 
 For more details, visit **https://skills.sh/docs**.
@@ -245,6 +245,32 @@ Analyze SRT subtitle files to generate engaging, viral-potential video titles. O
 | Douyin | Max 55 characters |
 
 **Dependencies**: None (prompt-based skill)
+
+#### twitter-downloader
+
+Download videos from individual X (Twitter) posts using `twmd`, an API-less Go-based downloader.
+
+```bash
+# Download a video from a tweet
+python twitter-downloader/scripts/download_tweet.py "https://x.com/username/status/1234567890"
+
+# Specify output directory
+python twitter-downloader/scripts/download_tweet.py "URL" -o ~/Downloads/twitter
+
+# Print video URL without downloading
+python twitter-downloader/scripts/download_tweet.py "URL" --url-only
+```
+
+**Options**:
+| Option | Description | Default |
+|--------|-------------|---------|
+| `url` | X/Twitter post URL (required) | - |
+| `-o, --output` | Output directory | Current directory |
+| `-s, --size` | Video size: small, normal, large | large |
+| `--url-only` | Print video URL without downloading | - |
+| `--cookies` | Path to twmd cookies JSON (for private content) | - |
+
+**Dependencies**: [yt-dlp](https://github.com/yt-dlp/yt-dlp): `pip install yt-dlp`
 
 #### youtube-downloader
 

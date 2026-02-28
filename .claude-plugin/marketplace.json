@@ -11,13 +11,14 @@
   "plugins": [
     {
       "name": "media-skills",
-      "description": "Media processing skills: download videos from YouTube and 1000+ sites, download Apple Podcasts episodes, convert PDFs to images, and generate viral video titles from subtitles",
+      "description": "Media processing skills: download videos from YouTube and 1000+ sites, download X/Twitter videos, download Apple Podcasts episodes, convert PDFs to images, and generate viral video titles from subtitles",
       "source": "./",
       "strict": false,
       "skills": [
         "./pdf-to-images",
         "./podcast-downloader",
         "./srt-title-generator",
+        "./twitter-downloader",
         "./youtube-downloader"
       ]
     },
