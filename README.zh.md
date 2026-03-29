@@ -1,8 +1,8 @@
-# Skills for Non-Coder
+# Green Train Skills
 
 [English](./README.md) | 中文
 
-**所有人都用得到**的 Agent 技能合集，涵盖媒体处理、内容加工和文件管理。通过简单的 AI 指令即可完成复杂操作。
+[绿皮火车](https://www.youtube.com/channel/UCJhUtNsR5pvU_gWWkxxUXUQ)出品的 Agent 技能合集，涵盖媒体处理、文件管理和本地 AI。通过简单的 AI 指令即可完成复杂操作。
 
 ## 视频教程
 
@@ -37,7 +37,7 @@ npx skills add crazynomad/skills
 **方式一：通过浏览界面**
 
 1. 选择 **Browse and install plugins**
-2. 选择 **noncoder-skills**
+2. 选择 **greentrain-skills**
 3. 选择要安装的插件
 4. 选择 **Install now**
 
@@ -45,8 +45,8 @@ npx skills add crazynomad/skills
 
 ```bash
 # 安装指定插件
-/plugin install media-skills@noncoder-skills
-/plugin install file-skills@noncoder-skills
+/plugin install greentrain-media@greentrain-skills
+/plugin install greentrain-files@greentrain-skills
 ```
 
 **方式三：告诉 Agent**
@@ -59,8 +59,8 @@ npx skills add crazynomad/skills
 
 | 插件 | 说明 | 包含技能 |
 |------|------|----------|
-| **media-skills** | 视频/播客下载、PDF 转换、标题生成 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [youtube-downloader](#youtube-downloader) |
-| **file-skills** | macOS 磁盘清理、文件整理、文档智能 | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
+| **greentrain-media** | 视频/播客下载、PDF 转换、标题生成、语音合成/识别 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [youtube-downloader](#youtube-downloader) |
+| **greentrain-files** | macOS 磁盘清理、文件整理、文档智能 | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 
 更多详情请访问 **https://skills.sh/docs**。
 
@@ -246,6 +246,83 @@ python podcast-downloader/scripts/download_podcast.py "PODCAST_URL" -n 10 -o ./p
 
 **依赖**：无（纯提示技能）
 
+#### tts
+
+Apple Silicon 本地语音合成（TTS）、语音识别（STT）和声音克隆工具，基于 [Vox CLI](https://github.com/3Craft/tts)（Qwen3-TTS + MLX）。所有处理完全在设备上运行，数据不会离开你的电脑。
+
+```bash
+# 文字转语音
+python tts/scripts/vox_tts.py speak "你好，世界" --voice Chelsie -o ./output
+
+# 带情感/风格指令
+python tts/scripts/vox_tts.py speak "太不可思议了！" --instruct "excited" -o ./output
+
+# 生成后立即播放
+python tts/scripts/vox_tts.py speak "你好世界" --play
+
+# 语音转文字
+python tts/scripts/vox_tts.py transcribe recording.wav -o ./output
+
+# 转录并生成 SRT 字幕
+python tts/scripts/vox_tts.py transcribe recording.wav --subtitle srt -o ./output
+
+# 从样本克隆声音
+python tts/scripts/vox_tts.py clone "用克隆声音朗读" --ref sample.wav -o ./output
+
+# 注册克隆声音以重复使用
+python tts/scripts/vox_tts.py clone --ref sample.wav --register my-voice
+
+# 用自然语言描述设计声音
+python tts/scripts/vox_tts.py design "你好" --desc "温暖友好的女性声音" -o ./output
+
+# 批量转换
+python tts/scripts/vox_tts.py batch texts.txt --voice Chelsie -o ./output
+
+# 列出可用声音
+python tts/scripts/vox_tts.py voices
+```
+
+**选项（speak）**：
+| 选项 | 说明 | 默认值 |
+|------|------|--------|
+| `-o, --output` | 输出目录 | 当前目录 |
+| `-v, --voice` | 声音名称 | Chelsie |
+| `-m, --model` | small、large、large-hq | small |
+| `-s, --speed` | 语速倍率 | 1.0 |
+| `-i, --instruct` | 情感/风格指令 | - |
+| `--play` | 生成后播放 | - |
+| `--subtitle` | 生成 srt 或 vtt 字幕 | - |
+
+**依赖**：
+- Apple Silicon Mac（M1/M2/M3/M4），macOS 13+
+- [Vox CLI](https://github.com/3Craft/tts)：`pipx install /path/to/tts`
+
+#### twitter-downloader
+
+基于 `twmd` 的 X / Twitter 视频下载工具，无需 API Key，下载单条推文中的视频。
+
+```bash
+# 下载推文视频
+python twitter-downloader/scripts/download_tweet.py "https://x.com/username/status/1234567890"
+
+# 指定输出目录
+python twitter-downloader/scripts/download_tweet.py "URL" -o ~/Downloads/twitter
+
+# 只打印视频 URL（不下载）
+python twitter-downloader/scripts/download_tweet.py "URL" --url-only
+```
+
+**选项**：
+| 选项 | 说明 | 默认值 |
+|------|------|--------|
+| `url` | X/Twitter 帖子 URL（必填） | - |
+| `-o, --output` | 输出目录 | 当前目录 |
+| `-q, --quality` | 视频质量：best、1080、720、480 | best |
+| `--url-only` | 只打印视频 URL，不下载 | - |
+| `--cookies` | Cookies 文件路径（私密内容） | - |
+
+**依赖**：[yt-dlp](https://github.com/yt-dlp/yt-dlp)：`pip install yt-dlp`
+
 #### youtube-downloader
 
 基于 `yt-dlp` 的强大视频下载工具，支持从 YouTube 及 1000+ 网站下载视频、播放列表、字幕和元数据。
@@ -302,6 +379,7 @@ skills/
 ├── pdf-to-images/
 ├── podcast-downloader/
 ├── srt-title-generator/
+├── tts/
 ├── youtube-downloader/
 └── README.md
 ```
@@ -313,6 +391,7 @@ skills/
 - **[Mole](https://github.com/tw93/Mole)** - macOS 系统清理核心引擎
 - **[markitdown](https://github.com/microsoft/markitdown)** - 微软出品的文档转 Markdown 工具
 - **[Ollama](https://ollama.com/)** - 本地大模型运行框架，用于文档摘要和分类
+- **[Vox CLI](https://github.com/3Craft/tts)** - Apple Silicon 本地语音合成/识别引擎，基于 Qwen3-TTS + MLX
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** - 视频下载核心引擎
 - **[ImageMagick](https://imagemagick.org/)** - PDF 转图片的基础
 - **[FFmpeg](https://ffmpeg.org/)** - 音频提取和视频处理必备工具

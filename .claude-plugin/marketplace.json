@@ -1,29 +1,31 @@
 {
-  "name": "noncoder-skills",
+  "name": "greentrain-skills",
   "owner": {
     "name": "Burn Wang",
     "email": "burn.wang@example.com"
   },
   "metadata": {
-    "description": "Agent skills for non-coders: media processing and file management",
-    "version": "1.1.0"
+    "description": "Green Train Skills - agent skills by 绿皮火车 for media processing, file management, and local AI",
+    "version": "2.0.0"
   },
   "plugins": [
     {
-      "name": "media-skills",
-      "description": "Media processing skills: download videos from YouTube and 1000+ sites, download Apple Podcasts episodes, convert PDFs to images, and generate viral video titles from subtitles",
+      "name": "greentrain-media",
+      "description": "Green Train media skills: download videos from YouTube and 1000+ sites, download X/Twitter videos, download Apple Podcasts episodes, convert PDFs to images, generate viral video titles from subtitles, and local TTS/STT on Apple Silicon",
       "source": "./",
       "strict": false,
       "skills": [
         "./pdf-to-images",
         "./podcast-downloader",
         "./srt-title-generator",
+        "./tts",
+        "./twitter-downloader",
         "./youtube-downloader"
       ]
     },
     {
-      "name": "file-skills",
-      "description": "macOS file management skills: free 100GB+ disk space with safe cleanup, organize 1000+ files with Smart Folders, convert office documents to a searchable knowledge base, and orchestrate all three in one workflow",
+      "name": "greentrain-files",
+      "description": "Green Train file skills: free 100GB+ disk space with safe cleanup, organize 1000+ files with Smart Folders, convert office documents to a searchable knowledge base, and orchestrate all three in one workflow",
       "source": "./",
       "strict": false,
       "skills": [

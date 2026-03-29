@@ -1,8 +1,8 @@
-# Skills for Non-Coder
+# Green Train Skills
 
 English | [中文](./README.zh.md)
 
-A collection of specialized agent skills designed for **non-coders** to handle media, content processing, and file management tasks. Perform complex operations through simple AI instructions.
+Agent skills by [绿皮火车](https://www.youtube.com/channel/UCJhUtNsR5pvU_gWWkxxUXUQ) for media processing, file management, and local AI. Perform complex operations through simple AI instructions.
 
 ## Video Tutorials
 
@@ -37,7 +37,7 @@ Run the following command in Claude Code:
 **Option 1: Via Browse UI**
 
 1. Select **Browse and install plugins**
-2. Select **noncoder-skills**
+2. Select **greentrain-skills**
 3. Select the plugin(s) you want to install
 4. Select **Install now**
 
@@ -45,8 +45,8 @@ Run the following command in Claude Code:
 
 ```bash
 # Install specific plugin
-/plugin install media-skills@noncoder-skills
-/plugin install file-skills@noncoder-skills
+/plugin install greentrain-media@greentrain-skills
+/plugin install greentrain-files@greentrain-skills
 ```
 
 **Option 3: Ask the Agent**
@@ -59,8 +59,8 @@ Simply tell Claude Code:
 
 | Plugin | Description | Skills |
 |--------|-------------|--------|
-| **media-skills** | Video/podcast downloading, PDF conversion, title generation | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [youtube-downloader](#youtube-downloader) |
-| **file-skills** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
+| **greentrain-media** | Video/podcast downloading, PDF conversion, title generation, TTS/STT | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [youtube-downloader](#youtube-downloader) |
+| **greentrain-files** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 
 For more details, visit **https://skills.sh/docs**.
 
@@ -246,6 +246,83 @@ Analyze SRT subtitle files to generate engaging, viral-potential video titles. O
 
 **Dependencies**: None (prompt-based skill)
 
+#### tts
+
+Local text-to-speech, speech-to-text, and voice cloning on Apple Silicon, powered by [Vox CLI](https://github.com/3Craft/tts) (Qwen3-TTS + MLX). All processing runs entirely on-device - your data never leaves your machine.
+
+```bash
+# Text-to-speech
+python tts/scripts/vox_tts.py speak "Hello world" --voice Chelsie -o ./output
+
+# Speak with emotion/style
+python tts/scripts/vox_tts.py speak "I can't believe it!" --instruct "excited" -o ./output
+
+# Play audio immediately
+python tts/scripts/vox_tts.py speak "Hello world" --play
+
+# Transcribe audio to text
+python tts/scripts/vox_tts.py transcribe recording.wav -o ./output
+
+# Transcribe with SRT subtitles
+python tts/scripts/vox_tts.py transcribe recording.wav --subtitle srt -o ./output
+
+# Clone a voice from a sample
+python tts/scripts/vox_tts.py clone "Text in cloned voice" --ref sample.wav -o ./output
+
+# Register a cloned voice for reuse
+python tts/scripts/vox_tts.py clone --ref sample.wav --register my-voice
+
+# Design a voice from description
+python tts/scripts/vox_tts.py design "Hello" --desc "warm friendly female voice" -o ./output
+
+# Batch TTS from file
+python tts/scripts/vox_tts.py batch texts.txt --voice Chelsie -o ./output
+
+# List available voices
+python tts/scripts/vox_tts.py voices
+```
+
+**Options (speak)**:
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-o, --output` | Output directory | Current directory |
+| `-v, --voice` | Voice name | Chelsie |
+| `-m, --model` | small, large, large-hq | small |
+| `-s, --speed` | Speed multiplier | 1.0 |
+| `-i, --instruct` | Emotion/style instruction | - |
+| `--play` | Play audio after generation | - |
+| `--subtitle` | Generate srt or vtt | - |
+
+**Dependencies**:
+- Apple Silicon Mac (M1/M2/M3/M4), macOS 13+
+- [Vox CLI](https://github.com/3Craft/tts): `pipx install /path/to/tts`
+
+#### twitter-downloader
+
+Download videos from individual X (Twitter) posts using `twmd`, an API-less Go-based downloader.
+
+```bash
+# Download a video from a tweet
+python twitter-downloader/scripts/download_tweet.py "https://x.com/username/status/1234567890"
+
+# Specify output directory
+python twitter-downloader/scripts/download_tweet.py "URL" -o ~/Downloads/twitter
+
+# Print video URL without downloading
+python twitter-downloader/scripts/download_tweet.py "URL" --url-only
+```
+
+**Options**:
+| Option | Description | Default |
+|--------|-------------|---------|
+| `url` | X/Twitter post URL (required) | - |
+| `-o, --output` | Output directory | Current directory |
+| `-q, --quality` | Video quality: best, 1080, 720, 480 | best |
+| `--url-only` | Print video URL without downloading | - |
+| `--cookies` | Path to cookies file (for private content) | - |
+
+**Dependencies**: [yt-dlp](https://github.com/yt-dlp/yt-dlp): `pip install yt-dlp`
+
 #### youtube-downloader
 
 A powerful video downloader wrapping `yt-dlp`. Supports downloading videos, playlists, subtitles, and metadata from YouTube and 1000+ other sites.
@@ -302,6 +379,7 @@ skills/
 ├── pdf-to-images/
 ├── podcast-downloader/
 ├── srt-title-generator/
+├── tts/
 ├── youtube-downloader/
 └── README.md
 ```
@@ -313,6 +391,7 @@ These skills stand on the shoulders of giants:
 - **[Mole](https://github.com/tw93/Mole)** - Core engine for macOS system cleaning.
 - **[markitdown](https://github.com/microsoft/markitdown)** - Microsoft's document-to-Markdown converter.
 - **[Ollama](https://ollama.com/)** - Local LLM runtime for document summarization and classification.
+- **[Vox CLI](https://github.com/3Craft/tts)** - Local TTS/STT engine for Apple Silicon via Qwen3-TTS + MLX.
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** - The backbone of our video downloading capabilities.
 - **[ImageMagick](https://imagemagick.org/)** - Powering our PDF to image conversion.
 - **[FFmpeg](https://ffmpeg.org/)** - Essential for high-quality audio extraction and video processing.
