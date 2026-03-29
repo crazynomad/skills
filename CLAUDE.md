@@ -37,6 +37,7 @@ Two skills are **prompt-based** (no scripts): `srt-title-generator` uses Claude'
 | media-skills | podcast-downloader | `scripts/download_podcast.py` | `pip install requests feedparser` |
 | media-skills | youtube-downloader | `scripts/download_video.py` | `pip install yt-dlp`, ffmpeg for audio |
 | media-skills | srt-title-generator | No script (prompt-based) | None |
+| media-skills | tts | `scripts/vox_tts.py` | Vox CLI (`pipx install .` from [3Craft/tts](https://github.com/3Craft/tts)), Apple Silicon only |
 | media-skills | twitter-downloader | `scripts/download_tweet.py` | `pip install yt-dlp` (same as youtube-downloader) |
 | file-skills | file-master | No script (prompt-based orchestrator) | All file-skills deps |
 | file-skills | disk-cleaner | `scripts/mole_cleaner.py` | Mole (`brew install tw93/tap/mole`) |
@@ -94,10 +95,18 @@ python disk-cleaner/scripts/mole_cleaner.py --clean --confirm
 python file-organizer/scripts/file_organizer.py --auto --dry-run
 python file-organizer/scripts/file_organizer.py --auto
 
+# TTS - text to speech
+python tts/scripts/vox_tts.py check
+python tts/scripts/vox_tts.py speak "Hello world" --voice Chelsie -o ./output
+python tts/scripts/vox_tts.py speak "Hello world" --play
+python tts/scripts/vox_tts.py transcribe recording.wav -o ./output
+python tts/scripts/vox_tts.py clone "Text" --ref sample.wav -o ./output
+python tts/scripts/vox_tts.py voices
+
 # Twitter/X video download
 python twitter-downloader/scripts/download_tweet.py "https://x.com/username/status/1234567890"
 python twitter-downloader/scripts/download_tweet.py "URL" --url-only   # check URL without downloading
-python twitter-downloader/scripts/download_tweet.py "URL" -o ./output -s large
+python twitter-downloader/scripts/download_tweet.py "URL" -o ./output -q 720
 
 # Doc mindmap (convert to Markdown)
 python doc-mindmap/scripts/doc_converter.py ~/Documents/test-docs --preview
@@ -115,9 +124,9 @@ python doc-mindmap/scripts/doc_converter.py ~/Documents/test-docs --organize --r
 
 ## Plugin Registration
 
-Skills are registered in `.claude-plugin/marketplace.json` (marketplace name: `noncoder-skills`). Two plugin groups:
-- `media-skills`: pdf-to-images, podcast-downloader, srt-title-generator, twitter-downloader, youtube-downloader
-- `file-skills`: file-master, disk-cleaner, file-organizer, doc-mindmap
+Skills are registered in `.claude-plugin/marketplace.json` (marketplace name: `greentrain-skills`). Two plugin groups:
+- `greentrain-media`: pdf-to-images, podcast-downloader, srt-title-generator, tts, twitter-downloader, youtube-downloader
+- `greentrain-files`: file-master, disk-cleaner, file-organizer, doc-mindmap
 
 When adding or updating a skill, **always update all three files together**:
 1. `.claude-plugin/marketplace.json` - add skill path to the appropriate plugin group

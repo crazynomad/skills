@@ -46,6 +46,9 @@ def download_tweet_video(url: str, output_dir: str = '.', quality: str = 'best',
     if not url_only:
         output_path.mkdir(parents=True, exist_ok=True)
 
+    # 记录下载前已有文件，用于之后只显示新文件
+    existing_files = set(output_path.iterdir()) if output_path.exists() else set()
+
     print(f"🔗 URL: {url}")
     if not url_only:
         print(f"📂 输出目录: {output_path.absolute()}")
@@ -108,7 +111,7 @@ def download_tweet_video(url: str, output_dir: str = '.', quality: str = 'best',
             print("✨ 下载完成!")
 
             downloaded = [f for f in output_path.iterdir()
-                          if f.is_file() and not f.name.startswith('.')]
+                          if f.is_file() and f not in existing_files]
             if downloaded:
                 print("\n📁 下载的文件:")
                 for f in sorted(downloaded):
