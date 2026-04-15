@@ -59,7 +59,7 @@ Simply tell Claude Code:
 
 | Plugin | Description | Skills |
 |--------|-------------|--------|
-| **greentrain-media** | Video/podcast downloading, PDF conversion, title generation, TTS/STT | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [youtube-downloader](#youtube-downloader) |
+| **greentrain-media** | Video/podcast downloading, PDF conversion, title generation, TTS/STT, visual PPT generation | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [youtube-downloader](#youtube-downloader) |
 | **greentrain-files** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 
 For more details, visit **https://skills.sh/docs**.
@@ -323,6 +323,19 @@ python twitter-downloader/scripts/download_tweet.py "URL" --url-only
 
 **Dependencies**: [yt-dlp](https://github.com/yt-dlp/yt-dlp): `pip install yt-dlp`
 
+#### visual-deck
+
+Generate "image + text" style visual PPT decks via an HTML→PPTX pipeline. Uses safe-zone typography (text only lands in designated image regions), overflow-to-notes discipline (never shrink fonts — spillover goes into speaker notes), and Nano Banana backgrounds. Ships with 8 layouts (cover, quote, l34/r34, 2col, 3col, timeline, stats) and a theme system (dark-coral, dark-teal). Intended for evangelism / internal sharing / client-facing decks where layout is image-driven; **not** for data reports or text-heavy docs.
+
+```bash
+# Run the minimal example (playwright + pptxgenjs + sharp required)
+cd visual-deck/examples/minimal
+npm install
+node build.js   # → output/deck.pptx
+```
+
+**Dependencies**: Node.js 18+, `npm install` inside the example/template directory pulls in `playwright`, `pptxgenjs`, and `sharp`.
+
 #### youtube-downloader
 
 A powerful video downloader wrapping `yt-dlp`. Supports downloading videos, playlists, subtitles, and metadata from YouTube and 1000+ other sites.
@@ -380,6 +393,8 @@ skills/
 ├── podcast-downloader/
 ├── srt-title-generator/
 ├── tts/
+├── twitter-downloader/
+├── visual-deck/
 ├── youtube-downloader/
 └── README.md
 ```

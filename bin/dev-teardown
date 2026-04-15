@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# dev-teardown — remove symlinks created by dev-setup
+#
+# Only removes symlinks that point into THIS repo. Real directories and
+# symlinks pointing elsewhere are left alone.
+#
+# Usage:
+#   bin/dev-teardown              # unlink all skills owned by this repo
+#   bin/dev-teardown visual-deck  # unlink only specified skill(s)
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TARGET_DIR="$HOME/.claude/skills"
+
+if [ $# -gt 0 ]; then
+  SKILLS=("$@")
+else
+  SKILLS=()
+  for d in "$REPO_ROOT"/*/; do
+    name="$(basename "$d")"
+    case "$name" in
+      bin|.*|node_modules|tts_output) continue ;;
+    esac
+    [ -f "$d/SKILL.md" ] || continue
+    SKILLS+=("$name")
+  done
+fi
+
+for skill in "${SKILLS[@]}"; do
+  dst="$TARGET_DIR/$skill"
+  src="$REPO_ROOT/$skill"
+
+  if [ ! -L "$dst" ]; then
+    echo "skip $skill (not a symlink at $dst)"
+    continue
+  fi
+
+  current="$(readlink "$dst")"
+  if [ "$current" != "$src" ]; then
+    echo "skip $skill (symlink points elsewhere: $current)"
+    continue
+  fi
+
+  rm "$dst"
+  echo "rm   $skill"
+done

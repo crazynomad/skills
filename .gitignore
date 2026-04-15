@@ -3,3 +3,10 @@ __pycache__/
 .claude/
 .DS_Store
 doc-mindmap/sample/
+
+# Node / visual-deck build artifacts
+node_modules/
+package-lock.json
+visual-deck/examples/*/deck.pptx
+visual-deck/examples/*/images/
+.venv/

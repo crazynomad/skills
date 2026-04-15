@@ -59,7 +59,7 @@ npx skills add crazynomad/skills
 
 | 插件 | 说明 | 包含技能 |
 |------|------|----------|
-| **greentrain-media** | 视频/播客下载、PDF 转换、标题生成、语音合成/识别 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [youtube-downloader](#youtube-downloader) |
+| **greentrain-media** | 视频/播客下载、PDF 转换、标题生成、语音合成/识别、视觉化 PPT 生成 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [youtube-downloader](#youtube-downloader) |
 | **greentrain-files** | macOS 磁盘清理、文件整理、文档智能 | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 
 更多详情请访问 **https://skills.sh/docs**。
@@ -323,6 +323,19 @@ python twitter-downloader/scripts/download_tweet.py "URL" --url-only
 
 **依赖**：[yt-dlp](https://github.com/yt-dlp/yt-dlp)：`pip install yt-dlp`
 
+#### visual-deck
+
+通过 HTML→PPTX 流水线生成"图+文"风格的视觉化 PPT。核心约束三条：**文字只进图像安全区**（只排在留白/暗色区里）、**溢出走 notes**（字号不缩，溢出内容塞进演讲者备注）、**Nano Banana 背景图**统一视觉语言。内置 8 种版式（cover / quote / l34 / r34 / 2col / 3col / timeline / stats）和主题系统（dark-coral、dark-teal）。适用于布道版 / 对外方案 / 内部分享类 PPT；**不适用**纯数据报表或纯文字文档。
+
+```bash
+# 跑通最小示例（需要 playwright + pptxgenjs + sharp）
+cd visual-deck/examples/minimal
+npm install
+node build.js   # → output/deck.pptx
+```
+
+**依赖**：Node.js 18+，进入 example/template 目录执行 `npm install` 会拉取 `playwright`、`pptxgenjs`、`sharp`。
+
 #### youtube-downloader
 
 基于 `yt-dlp` 的强大视频下载工具，支持从 YouTube 及 1000+ 网站下载视频、播放列表、字幕和元数据。
@@ -380,6 +393,8 @@ skills/
 ├── podcast-downloader/
 ├── srt-title-generator/
 ├── tts/
+├── twitter-downloader/
+├── visual-deck/
 ├── youtube-downloader/
 └── README.md
 ```

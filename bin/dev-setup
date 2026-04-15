@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# dev-setup — symlink skills from this repo into ~/.claude/skills/
+#
+# Pattern borrowed from gstack: develop in the repo, have Claude Code
+# load the skills live via symlinks. Re-run any time after adding a new
+# skill directory — existing symlinks are left alone.
+#
+# Usage:
+#   bin/dev-setup              # link all top-level skill dirs
+#   bin/dev-setup visual-deck  # link only specified skill(s)
+#
+# Teardown: bin/dev-teardown
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TARGET_DIR="$HOME/.claude/skills"
+
+mkdir -p "$TARGET_DIR"
+
+# Determine which skills to link
+if [ $# -gt 0 ]; then
+  SKILLS=("$@")
+else
+  SKILLS=()
+  for d in "$REPO_ROOT"/*/; do
+    name="$(basename "$d")"
+    # Skip non-skill dirs (bin, .git, .venv, node_modules, etc.)
+    case "$name" in
+      bin|.*|node_modules|tts_output) continue ;;
+    esac
+    # A skill dir must contain SKILL.md
+    [ -f "$d/SKILL.md" ] || continue
+    SKILLS+=("$name")
+  done
+fi
+
+for skill in "${SKILLS[@]}"; do
+  src="$REPO_ROOT/$skill"
+  dst="$TARGET_DIR/$skill"
+
+  if [ ! -f "$src/SKILL.md" ]; then
+    echo "skip $skill (no SKILL.md at $src)"
+    continue
+  fi
+
+  if [ -L "$dst" ]; then
+    current="$(readlink "$dst")"
+    if [ "$current" = "$src" ]; then
+      echo "ok   $skill (already linked)"
+    else
+      echo "warn $skill is linked elsewhere → $current (leaving alone)"
+    fi
+    continue
+  fi
+
+  if [ -e "$dst" ]; then
+    echo "warn $skill exists as real dir at $dst (leaving alone — move it manually)"
+    continue
+  fi
+
+  ln -s "$src" "$dst"
+  echo "link $skill → $src"
+done
