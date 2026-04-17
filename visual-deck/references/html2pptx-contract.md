@@ -12,6 +12,9 @@
 | 4 | **`<div>` 不能直接含裸文本** | `DIV element contains unwrapped text "..."` | 所有文字必须被 `<p>` / `<h1-6>` / `<ul>` / `<ol>` 包住 |
 | 5 | **`<p>` 不能以 `*` / `-` / `•` 开头** | `starts with bullet symbol` | 换文字（如 `注 ·`），或用 `<ul><li>...</li></ul>` |
 | 6 | **内容必须离 slide 底边 ≥ 0.5" (36pt)** | `overflows body by Xpt vertically` | slide body 高度 405pt，用 `var(--pad-slide)` 保证 36pt 底边，实际正文内容上限 ≈ **327pt 高度** |
+| 7 | **`<div>` 的直接子 `<span>` 文字会静默丢失** | **不报错但 PPTX 里文字消失** ⚠️ | 把 `<div class="grid"><span>X</span><span>Y</span></div>` 改成 `<div class="grid"><p>X</p><p>Y</p></div>`，加 `.grid p { margin: 0 }` 保持布局 |
+
+> **规则 7 的危险**：它**不会触发 build 错误**——所以 lint 也抓不到。只有打开 PPTX 才能发现文字消失。受害最典型的是 `display: grid` / `display: flex` 的行容器，把 `<span>` 当作列用。全部改 `<p>` 并重置 margin。
 
 ## 二、常见修复套路
 
@@ -79,6 +82,36 @@ body {
 ```css
 .arrow { padding: 0 10pt; }
 ```
+
+### 套路 5a：div 里只放 span 会悄悄丢字（**最狡猾的坑**）
+
+这条规则 7 的危险在于**不会报错**。build 过，但 PPTX 打开后那个区域空白。
+
+❌ 不行：
+```html
+<div class="v-row">
+  <span class="v-step">STEP 1</span>
+  <span class="v-text">需求爆炸 · 三行业 Token 兑现</span>
+  <span class="v-tag">TRUE</span>
+</div>
+```
+
+✅ 正确：
+```html
+<div class="v-row">
+  <p class="v-step">STEP 1</p>
+  <p class="v-text">需求爆炸 · 三行业 Token 兑现</p>
+  <p class="v-tag">TRUE</p>
+</div>
+<style>
+  .v-row { display: grid; grid-template-columns: 80pt 1fr 36pt; }
+  .v-row p { margin: 0; }   /* 关键：重置 p 默认 margin，保持 grid 排版 */
+</style>
+```
+
+> **典型受害结构**：`display: grid` / `display: flex` 的 row/cell 容器，用 `<span>` 作为网格列。都要改成 `<p>`。
+
+> **检测**：`tools/fix-html-for-pptx.js` 会扫出"直接子节点全是 `<span>` + 文本"的 `<div>` 并自动转 `<p>`。
 
 ### 套路 5：手动 bullet
 
