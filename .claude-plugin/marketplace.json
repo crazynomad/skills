@@ -35,6 +35,17 @@
         "./file-organizer",
         "./doc-mindmap"
       ]
+    },
+    {
+      "name": "greentrain-planning",
+      "description": "Green Train planning skills: think-before-you-slide PPT methodology. Classify PPT type (pitch / research / teaching / narrative), set up research-driven thesis with six-question specificity diagnostic, and review storyline for structural fit. Pairs with visual-deck for the full pipeline.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./ppt-classify",
+        "./ppt-research-setup",
+        "./ppt-narrative-review"
+      ]
     }
   ]
 }

@@ -47,6 +47,7 @@ Run the following command in Claude Code:
 # Install specific plugin
 /plugin install greentrain-media@greentrain-skills
 /plugin install greentrain-files@greentrain-skills
+/plugin install greentrain-planning@greentrain-skills
 ```
 
 **Option 3: Ask the Agent**
@@ -61,12 +62,13 @@ Simply tell Claude Code:
 |--------|-------------|--------|
 | **greentrain-media** | Video/podcast downloading, PDF conversion, title generation, TTS/STT, visual PPT generation | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [youtube-downloader](#youtube-downloader) |
 | **greentrain-files** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
+| **greentrain-planning** | Think-before-you-slide PPT methodology: classify, research-driven thesis, storyline review | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
 
 For more details, visit **https://skills.sh/docs**.
 
 ## Available Skills
 
-Skills are organized into three categories:
+Skills are organized into four categories:
 
 ### File Management (macOS)
 
@@ -378,6 +380,52 @@ python youtube-downloader/scripts/download_video.py "URL" -o ./videos
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp): `pip install yt-dlp`
 - [FFmpeg](https://ffmpeg.org/) (for audio extraction): `brew install ffmpeg`
 
+### Planning & Methodology
+
+A "think-before-you-slide" PPT toolkit. Pairs with `visual-deck` to form a full **classify → thesis → review → render** pipeline. Distilled from 绿皮火车 EP10 《AI 做 PPT》 experiments.
+
+#### ppt-classify
+
+Classify a PPT brief into one of four types — **Pitch / Research / Teaching / Narrative** — and route to the right thesis-setup method. Different PPT types need different立论 frameworks: a research PPT is not a pitch, a pitch is not a narrative. Using the wrong type's structure is the single biggest PPT mistake.
+
+**When to Use**: At the very start of PPT planning, BEFORE writing any slide. Especially useful when the user says "help me make a PPT about X" but hasn't decided how to frame it.
+
+**Workflow**: Ask Q1-Q3 diagnostic chain (decision-driven? → teaching目标? → event vs argument?) → output type + recommended next skill + one-line thesis framework preview.
+
+**Dependencies**: None (prompt-based skill)
+
+#### ppt-research-setup
+
+Set up a research-driven PPT thesis using a three-section framework plus a six-question specificity diagnostic. Distilled from research-grade content like Dylan Patel, Dwarkesh × Jensen, and 硅谷101 GTC 2026.
+
+**Three-Section Framework**:
+1. **Counter-consensus paradox** (research motivation) — a question everyone thinks is answered but isn't
+2. **Structural decomposition framework** (research boundary) — 3-5 analytical dimensions
+3. **3-4 investigation paths** (concrete sub-questions) — each independently verifiable, layered (intuitive → reverse-reasoning → blind-spot)
+
+**Six-Question Specificity Diagnostic** (borrowed from YC forcing questions, reframed for research):
+Demand Reality / Status Quo / Desperate Specificity / Narrowest Wedge / Observation & Surprise / Future-Fit.
+
+Core principle: *Specificity is the only currency. Vague answers get pushed.*
+
+**Dependencies**: None (prompt-based skill)
+
+#### ppt-narrative-review
+
+Review a PPT storyline for structural fit, pacing, and key-visual anchors. **Type-aware** — research-driven, pitch-driven, teaching-driven, and narrative-driven decks each have a distinct valid storyline shape. Catches structural mismatches (e.g. research deck using pitch opening) before you burn hours on visuals.
+
+**Four Storyline Shapes**:
+| Type | Shape |
+|------|-------|
+| Research | Paradox → Framework → Investigation paths → Synthesis |
+| Pitch | Conclusion → Pain → Evidence laddering → Counterargument → CTA |
+| Teaching | Pain → Capability promise → Steps → Traps → Advanced |
+| Narrative | Protagonist → Inciting event → Struggle → Turning point → New state |
+
+**Output**: Structure-fit score, page-by-page review (✅ core / 🔶 support / ❌ cut), key-visual anchor recommendations.
+
+**Dependencies**: None (prompt-based skill)
+
 ## Structure
 
 Each skill is contained in its own directory with a `SKILL.md` file defining its interface, usage, and dependencies.
@@ -396,6 +444,9 @@ skills/
 ├── twitter-downloader/
 ├── visual-deck/
 ├── youtube-downloader/
+├── ppt-classify/
+├── ppt-research-setup/
+├── ppt-narrative-review/
 └── README.md
 ```
 

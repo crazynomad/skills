@@ -47,6 +47,7 @@ npx skills add crazynomad/skills
 # 安装指定插件
 /plugin install greentrain-media@greentrain-skills
 /plugin install greentrain-files@greentrain-skills
+/plugin install greentrain-planning@greentrain-skills
 ```
 
 **方式三：告诉 Agent**
@@ -61,12 +62,13 @@ npx skills add crazynomad/skills
 |------|------|----------|
 | **greentrain-media** | 视频/播客下载、PDF 转换、标题生成、语音合成/识别、视觉化 PPT 生成 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [youtube-downloader](#youtube-downloader) |
 | **greentrain-files** | macOS 磁盘清理、文件整理、文档智能 | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
+| **greentrain-planning** | PPT 方法论：先想清楚再开 PowerPoint。PPT 分类、研究型立论、故事线评审 | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
 
 更多详情请访问 **https://skills.sh/docs**。
 
 ## 可用技能
 
-技能分为三大类：
+技能分为四大类：
 
 ### 文件管理（macOS）
 
@@ -378,6 +380,52 @@ python youtube-downloader/scripts/download_video.py "URL" -o ./videos
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)：`pip install yt-dlp`
 - [FFmpeg](https://ffmpeg.org/)（用于音频提取）：`brew install ffmpeg`
 
+### PPT 方法论
+
+"先想清楚再开 PowerPoint"的 PPT 工具箱。配合 `visual-deck` 形成完整的 **分类 → 立论 → 评审 → 生成** 管线。提炼自绿皮火车 EP10《AI 做 PPT》的实验过程。
+
+#### ppt-classify
+
+把 PPT 需求归到四类之一 —— **Pitch / Research / Teaching / Narrative**，并路由到对应的立论 skill。不同类型的 PPT 立论方式完全不同：研究型不是 pitch，pitch 不是叙事。用错类型的结构是做 PPT 最大的错误。
+
+**何时使用**：做 PPT 的最开始，**在写任何一页之前**。特别适合用户说"帮我做一份 xxx 的 PPT"但还没想好如何切入的场景。
+
+**工作流**：Q1-Q3 诊断链（是否驱动决策？→ 是否有能力目标？→ 事件经过 vs 抽象论证？）→ 输出类型判定 + 推荐下一 skill + 一句话立论框架预览。
+
+**依赖**：无（纯提示词 skill）
+
+#### ppt-research-setup
+
+用**三段式框架**+**六问 specificity 诊断**把研究型 PPT 的立论做扎实。方法论提炼自 Dylan Patel、Dwarkesh × Jensen、硅谷101 GTC 2026 等研究型内容的开场模式。
+
+**三段式框架**：
+1. **反共识悖论**（研究动机）—— 一个大家以为答案已定、实际没那么确定的问题
+2. **结构化拆解框架**（研究边界）—— 3-5 个分析维度
+3. **3-4 条调查路径**（硬核子议题）—— 每条独立可验证、有层次（直观 → 反推 → 盲区）
+
+**六问 specificity 诊断**（挪用 YC forcing questions 到研究语境）：
+最硬证据 / 业内默认解 / 点名到位 / 最锐子题 / 反共识观察 / 3 年生存。
+
+核心原则：*Specificity is the only currency. Vague answers get pushed.*
+
+**依赖**：无（纯提示词 skill）
+
+#### ppt-narrative-review
+
+从**结构合身度**、**起承转合**、**关键锚点**三个维度评审故事线。**Type-aware** —— 研究型、pitch 型、教学型、叙事型故事线各有独立的合身结构，能在动笔做视觉前拦下结构级错配（如研究型却用了 pitch 开场）。
+
+**四种合身故事线**：
+| 类型 | 结构 |
+|------|------|
+| Research | 悖论 → 框架 → 调查路径 → 综合判断 |
+| Pitch | 结论前置 → 痛点 → 论据递进 → 反方反驳 → CTA |
+| Teaching | 痛点 → 能力承诺 → 步骤 → 陷阱 → 进阶 |
+| Narrative | 主角 → 激励事件 → 挣扎 → 转折 → 新状态 |
+
+**输出**：结构匹配度打分、逐页评审（✅ 核心 / 🔶 支撑 / ❌ 冗余）、关键锚点建议。
+
+**依赖**：无（纯提示词 skill）
+
 ## 目录结构
 
 每个技能独立一个目录，通过 `SKILL.md` 定义接口、用法和依赖。
@@ -396,6 +444,9 @@ skills/
 ├── twitter-downloader/
 ├── visual-deck/
 ├── youtube-downloader/
+├── ppt-classify/
+├── ppt-research-setup/
+├── ppt-narrative-review/
 └── README.md
 ```
 
