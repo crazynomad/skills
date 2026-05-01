@@ -13,6 +13,7 @@
 | 5 | **`<p>` 不能以 `*` / `-` / `•` 开头** | `starts with bullet symbol` | 换文字（如 `注 ·`），或用 `<ul><li>...</li></ul>` |
 | 6 | **内容必须离 slide 底边 ≥ 0.5" (36pt)** | `overflows body by Xpt vertically` | slide body 高度 405pt，用 `var(--pad-slide)` 保证 36pt 底边，实际正文内容上限 ≈ **327pt 高度** |
 | 7 | **`<div>` 的直接子 `<span>` 文字会静默丢失** | **不报错但 PPTX 里文字消失** ⚠️ | 把 `<div class="grid"><span>X</span><span>Y</span></div>` 改成 `<div class="grid"><p>X</p><p>Y</p></div>`，加 `.grid p { margin: 0 }` 保持布局 |
+| 8 | **浏览器默认 `<p>` margin 不会被 html2pptx 折叠** | `overflows body by Npt` 集中在多 slide · 本地预览却正常 | 每个 slide `<style>` 开头加全局 reset：`p, h1-h6, ul, ol { margin: 0; padding: 0 }`（详见套路 5c） |
 
 > **规则 7 的危险**：它**不会触发 build 错误**——所以 lint 也抓不到。只有打开 PPTX 才能发现文字消失。受害最典型的是 `display: grid` / `display: flex` 的行容器，把 `<span>` 当作列用。全部改 `<p>` 并重置 margin。
 
@@ -112,6 +113,49 @@ body {
 > **典型受害结构**：`display: grid` / `display: flex` 的 row/cell 容器，用 `<span>` 作为网格列。都要改成 `<p>`。
 
 > **检测**：`tools/fix-html-for-pptx.js` 会扫出"直接子节点全是 `<span>` + 文本"的 `<div>` 并自动转 `<p>`。
+
+### 套路 5b：span 里的类有 background / border（5a + 规则 3 组合坑）
+
+**典型场景**：`.tag` / `.chip` / `.box` / `.pill` 这类用 `<span>` 写的 UI "标签"，类定义了 `padding + background + border`。直接对它走 5a（span→p），会立刻触发规则 3（`<p>` 不能有 bg）。
+
+❌ 错误（5a 后的中间状态）：
+```html
+<div class="tags">
+  <p class="tag">AI 原生</p>   <!-- 5a 转完是 p · 但 .tag 有 bg → build 报错 -->
+</div>
+<style>.tag { padding: 4pt 9pt; background: rgba(...); border: 1pt solid; }</style>
+```
+
+✅ 正确（双重转换 · 5a + 规则 2 一起应用）：
+```html
+<div class="tags">
+  <div class="tag"><p>AI 原生</p></div>
+</div>
+<style>
+  .tag { padding: 4pt 9pt; background: rgba(...); border: 1pt solid; }
+  .tag p { margin: 0; }
+</style>
+```
+
+> **自动修复顺序**：`fix-html-for-pptx.js` 现在会在规则 7 产出新的 `<p class="X">` 后 · 再跑一轮规则 3 · 自动把带 bg 的 class 继续包成 div+p。手工写 slide 时若记得这组合坑 · 直接用 div+p 可省一个中间步骤。
+
+### 套路 5c：基线 CSS reset · 防止浏览器默认 margin 塌陷
+
+**陷阱根源**：浏览器对 `<p>` / `<h1-6>` / `<ul>` / `<ol>` 默认有 `margin: 1em 0` 上下外边距 · 在 flex / grid 容器里浏览器会 margin collapse（折叠不可见）· 但 **html2pptx 不做 margin collapse** · 一个 row 里多个 `<p>` 会把每个 `<p>` 的上下 margin 全部累加 · 导致 overflow。
+
+❌ 没 reset：
+- 浏览器看 slide 一切正常 · check-overflow 过
+- `build --lint` 突然报 `overflows body by Npt vertically` · 50-120pt 都可能
+
+✅ 每个 slide 的 `<style>` 块开头加：
+```css
+p, h1, h2, h3, h4, h5, h6, ul, ol { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+```
+
+> **等价于** 给所有块级文本元素上"margin: 0"基础线 · 在此基础上再按类 / id 覆盖具体间距。几乎所有 slide 模板都应该预置这行。
+
+> **诊断信号**：build 时大量 slide 出现"overflow by 20-60pt"但浏览器预览没问题 → 99% 是这个原因。
 
 ### 套路 5：手动 bullet
 
