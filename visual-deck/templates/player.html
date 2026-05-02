@@ -128,7 +128,15 @@
 
   const pad = n => String(n).padStart(2, '0');
 
+  // Set this to your total slide count if you open the player via file:// —
+  // browsers block fetch() HEAD requests on local files (CORS), so auto-discovery
+  // returns 0. Leave as 0 if you serve over http (e.g. `python3 -m http.server`).
+  const SLIDE_TOTAL_FALLBACK = 0;
+
   async function discoverTotal() {
+    if (location.protocol === 'file:' && SLIDE_TOTAL_FALLBACK > 0) {
+      return SLIDE_TOTAL_FALLBACK;
+    }
     let n = 0;
     while (n < 200) {
       const next = n + 1;

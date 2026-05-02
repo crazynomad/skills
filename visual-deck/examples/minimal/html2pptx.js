@@ -525,11 +525,65 @@ async function extractSlideData(page) {
       };
     }
 
+    // Detect "partial" body background — image with explicit size + no-repeat.
+    // e.g. `background: url(slide05.png) left center / 300pt 405pt no-repeat`
+    // pptxgen slide.background only supports full-bleed; a partial background
+    // would otherwise get stretched to fill the whole slide. Convert to a
+    // positioned image element instead, and demote the slide background to
+    // color only.
+    let partialBgImage = null;
+    if (background.type === 'image' && background.path) {
+      // Multi-layer backgrounds: getComputedStyle returns "L1, L2" comma-separated.
+      // We only care about the first (foreground image) layer.
+      const firstLayer = (s) => (s || '').split(',')[0].trim();
+      const bgSize = firstLayer(bodyStyle.backgroundSize);
+      const bgPosition = firstLayer(bodyStyle.backgroundPosition);
+      const bgRepeat = firstLayer(bodyStyle.backgroundRepeat);
+      const isFullCover = !bgSize || bgSize === 'auto' || bgSize === 'cover'
+        || bgSize === 'contain' || bgSize === '100% 100%';
+      if (!isFullCover && bgRepeat === 'no-repeat') {
+        const sizeParts = bgSize.split(/\s+/);
+        if (sizeParts.length === 2) {
+          const slideW = body.offsetWidth;
+          const slideH = body.offsetHeight;
+          const parseSize = (v, axisDim) => {
+            if (v.endsWith('%')) return (parseFloat(v) / 100) * axisDim;
+            return parseFloat(v); // assume px
+          };
+          const imgW = parseSize(sizeParts[0], slideW);
+          const imgH = parseSize(sizeParts[1], slideH);
+          // Position parsing — getComputedStyle returns "X% Y%" or "Xpx Ypx"
+          const posParts = (bgPosition || '0% 0%').split(/\s+/);
+          const parsePos = (v, slideDim, imgDim) => {
+            if (v.endsWith('%')) return (parseFloat(v) / 100) * (slideDim - imgDim);
+            return parseFloat(v); // assume px
+          };
+          const imgX = parsePos(posParts[0] || '0%', slideW, imgW);
+          const imgY = parsePos(posParts[1] || '0%', slideH, imgH);
+          partialBgImage = {
+            type: 'image',
+            src: background.path,
+            position: {
+              x: pxToInch(imgX),
+              y: pxToInch(imgY),
+              w: pxToInch(imgW),
+              h: pxToInch(imgH),
+            }
+          };
+          // Demote slide background to color only (so PPTX doesn't full-bleed it)
+          background = { type: 'color', value: rgbToHex(bgColor) };
+        }
+      }
+    }
+
     // Process all elements
     const elements = [];
     const placeholders = [];
     const textTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI'];
     const processed = new Set();
+
+    // Insert the partial-background image FIRST so it renders behind everything else
+    if (partialBgImage) elements.push(partialBgImage);
 
     document.querySelectorAll('*').forEach((el) => {
       if (processed.has(el)) return;
