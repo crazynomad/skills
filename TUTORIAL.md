@@ -4,6 +4,7 @@
 >
 > 📺 YouTube：https://youtu.be/Tn1IIQJqV84
 > 📺 B站：https://www.bilibili.com/video/BV1sY9sBLELj/
+> 📂 视频里那份 22 页 NVIDIA 护城河 PPT 原档下载（PPTX + PDF）：[ep10-nvidia-moat release](https://github.com/crazynomad/skills/releases/tag/ep10-nvidia-moat)
 
 ---
 
