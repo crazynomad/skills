@@ -53,10 +53,15 @@ def gws_call(
         cmd += ["--params", json.dumps(params)]
     if body is not None:
         cmd += ["--json", json.dumps(body)]
+    cwd: str | None = None
     if upload_file is not None:
-        cmd += ["--upload", str(upload_file)]
+        # gws rejects --upload paths outside the current working dir as a sandbox
+        # safeguard. Run the subprocess with cwd = image's parent and pass only
+        # the filename so the path resolves inside cwd.
+        cmd += ["--upload", upload_file.name]
+        cwd = str(upload_file.parent)
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
     if result.returncode != 0:
         sys.exit(
             f"gws call failed: {' '.join(cmd[:3])}...\n"
