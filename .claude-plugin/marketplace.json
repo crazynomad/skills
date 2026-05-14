@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "greentrain-media",
-      "description": "Green Train media skills: download videos from YouTube and 1000+ sites, download X/Twitter videos, download Apple Podcasts episodes, convert PDFs to images, generate viral video titles from subtitles, local TTS/STT on Apple Silicon, and generate visual PPT decks via HTML→PPTX pipeline",
+      "description": "Green Train media skills: download videos from YouTube and 1000+ sites, download X/Twitter videos, download Apple Podcasts episodes, convert PDFs to images, generate viral video titles from subtitles, local TTS/STT on Apple Silicon, generate visual PPT decks via HTML→PPTX pipeline, and inject content into Google Slides templates via the gws CLI",
       "source": "./",
       "strict": false,
       "skills": [
@@ -21,6 +21,7 @@
         "./tts",
         "./twitter-downloader",
         "./visual-deck",
+        "./visual-slides",
         "./youtube-downloader"
       ]
     },

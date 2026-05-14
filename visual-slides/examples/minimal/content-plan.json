@@ -1,0 +1,33 @@
+{
+  "title": "Visual-Slides Minimal Example",
+  "templateDeckId": "REPLACE_WITH_YOUR_TEMPLATE_DECK_ID_ABC123",
+  "driveImageFolderId": "REPLACE_WITH_YOUR_IMAGES_FOLDER_ID_XYZ789",
+  "outputDeckTitle": "Minimal Example — Generated",
+  "templateVersion": "v1.0",
+
+  "slides": [
+    {
+      "page": 1,
+      "text": {
+        "title": "测试 visual-slides",
+        "subtitle": "两页最小例子"
+      },
+      "image": {
+        "hero": "images/bg-01-cover-scrimmed.png"
+      },
+      "notes": "这是第 1 页的演讲者备注示例。"
+    },
+    {
+      "page": 2,
+      "text": {
+        "title": "Pipeline 验证",
+        "bullet-1": "validate_plan.py — schema 校验",
+        "bullet-2": "inject.py --dry-run — 不动 Drive 看请求",
+        "bullet-3": "inject.py — 真跑生成 deck"
+      },
+      "image": {
+        "side": "images/bg-02-validation-scrimmed.png"
+      }
+    }
+  ]
+}

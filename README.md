@@ -60,7 +60,7 @@ Simply tell Claude Code:
 
 | Plugin | Description | Skills |
 |--------|-------------|--------|
-| **greentrain-media** | Video/podcast downloading, PDF conversion, title generation, TTS/STT, visual PPT generation | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [youtube-downloader](#youtube-downloader) |
+| **greentrain-media** | Video/podcast downloading, PDF conversion, title generation, TTS/STT, visual PPT generation | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [visual-slides](#visual-slides), [youtube-downloader](#youtube-downloader) |
 | **greentrain-files** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 | **greentrain-planning** | Think-before-you-slide PPT methodology: classify, research-driven thesis, storyline review | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
 
@@ -337,6 +337,21 @@ node build.js   # → output/deck.pptx
 ```
 
 **Dependencies**: Node.js 18+, `npm install` inside the example/template directory pulls in `playwright`, `pptxgenjs`, and `sharp`.
+
+#### visual-slides
+
+Inject content into a hand-authored Google Slides template via the [`gws` CLI](https://github.com/googleworkspace/cli). Shares the visual-deck design language (safe-zone typography, V2 four-segment image prompts, Nano Banana backgrounds, scrim baking) but outputs to a live Google Slides URL instead of a local `.pptx`. Pipeline: copy template deck → upload images to Drive (made public-readable) → `slides.batchUpdate` with `replaceAllText` + `replaceAllShapesWithImage`. Best for decks that need to live on Drive (collaboration, comments) or for templates filled with many content variants. **Not** a drop-in for visual-deck — different output target, different constraints; see `visual-slides/SKILL.md` for the comparison.
+
+```bash
+# Walk through the minimal 2-slide example
+cd visual-slides/examples/minimal
+cat README.md
+python ../../scripts/validate_plan.py content-plan.json
+python ../../scripts/inject.py content-plan.json --dry-run
+python ../../scripts/inject.py content-plan.json
+```
+
+**Dependencies**: `gws` CLI on PATH + `gws auth login` completed; Python 3.10+ with `Pillow` (for scrim baking).
 
 #### youtube-downloader
 

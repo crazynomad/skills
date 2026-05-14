@@ -60,7 +60,7 @@ npx skills add crazynomad/skills
 
 | 插件 | 说明 | 包含技能 |
 |------|------|----------|
-| **greentrain-media** | 视频/播客下载、PDF 转换、标题生成、语音合成/识别、视觉化 PPT 生成 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [youtube-downloader](#youtube-downloader) |
+| **greentrain-media** | 视频/播客下载、PDF 转换、标题生成、语音合成/识别、视觉化 PPT 生成 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [visual-slides](#visual-slides), [youtube-downloader](#youtube-downloader) |
 | **greentrain-files** | macOS 磁盘清理、文件整理、文档智能 | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 | **greentrain-planning** | PPT 方法论：先想清楚再开 PowerPoint。PPT 分类、研究型立论、故事线评审 | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
 
@@ -337,6 +337,21 @@ node build.js   # → output/deck.pptx
 ```
 
 **依赖**：Node.js 18+，进入 example/template 目录执行 `npm install` 会拉取 `playwright`、`pptxgenjs`、`sharp`。
+
+#### visual-slides
+
+通过 [`gws` CLI](https://github.com/googleworkspace/cli) 把内容注入到一份**手工维护的 Google Slides 母板**里。和 visual-deck 共用同一套设计语言（安全区文字、V2 四段式 image prompt、Nano Banana 背景、scrim 烘焙），但输出从本地 `.pptx` 换成线上 Slides URL。流程：复制母板 → 上传图片到 Drive（自动设公开可读）→ `slides.batchUpdate` 用 `replaceAllText` + `replaceAllShapesWithImage` 注入。适用：需要协作评论的线上 deck、同一模板填多套数据。**不适用**：一次性离线 PPT 文件（用 visual-deck），或视觉精度要求极高（Slides API 字体/阴影表达力较弱）。详细对比见 `visual-slides/SKILL.md`。
+
+```bash
+# 跑通两页最小示例
+cd visual-slides/examples/minimal
+cat README.md
+python ../../scripts/validate_plan.py content-plan.json
+python ../../scripts/inject.py content-plan.json --dry-run
+python ../../scripts/inject.py content-plan.json
+```
+
+**依赖**：`gws` CLI 已装并完成 `gws auth login`；Python 3.10+ 安装 `Pillow`（scrim 烘焙）。
 
 #### youtube-downloader
 

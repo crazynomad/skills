@@ -1,0 +1,36 @@
+{
+  "title": "Q2 战略评审",
+  "templateDeckId": "REPLACE_WITH_TEMPLATE_DECK_ID",
+  "driveImageFolderId": "REPLACE_WITH_IMAGES_FOLDER_ID",
+  "outputDeckTitle": "Q2 战略评审 — 2026-05-14",
+  "templateVersion": "v1.0",
+
+  "slides": [
+    {
+      "page": 1,
+      "text": {
+        "title": "重塑荣联汽车数智化",
+        "subtitle": "2026 Q2 战略评审",
+        "source": "internal · prepared by burn.wang"
+      },
+      "image": {
+        "hero": "images/bg-01-cover-scrimmed.png"
+      },
+      "notes": "开场 30 秒不超过两句话。点出今天 deck 想回答的核心问题:'为什么 Q2 比 Q1 更重要'。"
+    },
+    {
+      "page": 2,
+      "text": {
+        "eyebrow": "市场态势",
+        "title": "三条同时发生的曲线",
+        "bullet-1": "整车厂数字化预算 ↓ 18%",
+        "bullet-2": "供应链复杂度 ↑、决策周期 ↓",
+        "bullet-3": "AI 成为差异化竞争主轴"
+      },
+      "image": {
+        "side": "images/bg-02-market-scrimmed.png"
+      },
+      "notes": "18% 这个数字放在第一句开口。后面两条是上下文,不要每条都展开,留 15 秒收。"
+    }
+  ]
+}
