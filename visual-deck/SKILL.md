@@ -1,204 +1,234 @@
 ---
 name: visual-deck
-description: Generate "image + text" style visual PPT decks (evangelism / internal sharing / client-facing) using an HTML→PPTX pipeline with safe-zone typography, Nano Banana backgrounds, and overflow-to-notes discipline. Use when the user wants a visually dense, cinematic slide deck where layout is image-driven rather than text-driven. NOT for pure data reports or text-heavy documents.
-version: 0.3.0
+description: Generate "image + text" style visual decks on the open-slide React framework with 绿皮火车's design system — dark-teal / dark-coral themes, four core layouts (hero-cover / chapter-cover / takeaway / thesis), Nano Banana background imagery, and safe-zone typography discipline. Use when the user wants a visually dense, cinematic slide deck where layout is image-driven rather than text-driven and is comfortable shipping a static URL or PDF. NOT for legacy .pptx file output — that path was removed in v1.0; future PPTX export is planned as an open-slide upstream contribution.
+version: 1.0.0
 ---
 
-# visual-deck — 视觉版 PPT 生成
+# visual-deck — 视觉版 deck 设计系统
+
+绿皮火车频道的 deck 设计语言。基于 [open-slide](https://github.com/1weiho/open-slide) React 框架,提供:**两套频道主题** + **四个核心版式词汇** + **Nano Banana 背景图规范** + **安全区/溢出/V2 prompt 编辑纪律**。
+
+v1.0 是大版本切换:旧版的 HTML→PPTX 渲染管线(pptxgenjs / scrim-bake / 8 layouts / check-overflow)已**全部移除**。如果你要找 PPTX 输出能力,见 SKILL.md 末尾的 [PPTX Roadmap](#pptx-roadmap)。
 
 ## 何时触发
 
-**适用**：
-- 布道版 / 对外方案 / 内部分享类 PPT，版式优先、内容随图走
-- 需要背景图 + 前景文字的「图+文」统一风格
-- 单页信息密度高，但视觉需要干净
+**适用**:
+- 布道版 / 对外方案 / 内部分享 / YouTube 视频用 deck,**最终交付物可以是 URL 或 PDF**
+- 单页信息密度高,版式需要干净一致
+- 需要重复复用绿皮火车的视觉身份(dark-teal 技术系 / dark-coral 人文系)
+- agent 主导的迭代式 deck(`pnpm dev` HMR + 浏览器 inspector + `/apply-comments`)
 
-**不适用**：
-- 纯数据报表、纯文字文档 → 用 docx/xlsx
-- 临时一次性 PPT，不值得搭 pipeline → 直接用 pptx skill
-- 客户方不接受 cinematic 风格 → 本 skill 的图像语言不匹配
+**不适用**:
+- **必须**交付 `.pptx` 文件让客户在 PowerPoint 里编辑 → 暂时回退到 `pptx` skill,或等 PPTX 上游 export
+- 纯数据报表 / 纯文字文档 → 用 docx/xlsx skill
+- 一次性临时 deck(不值得 setup open-slide 项目) → 直接用 pptx skill
 
-## 三条硬约束（不可妥协）
+## 三条硬约束(从 visual-deck 0.x 继承)
 
-这三条是踩过坑换来的，违反任何一条直接退回：
+这三条是踩过坑换来的,违反任何一条直接退回。
 
-### 1. 文字只进安全区，溢出走 notes
+### 1. 文字只进安全区,溢出走 speaker notes
 
-- 每张 slide 都有天然的图像安全区（暗色区/留白区），前景文字**只能排在里面**
-- 正文装不下时：**不许缩字号**，不许退回"全屏蒙版压字"。把溢出内容灌进 `slide.addNotes()`
-- 具体安全区%见 `references/safe-zone-spec.md`
+- 每张 slide 都有天然的安全区(暗色区 / 留白区),前景文字**只能排在里面**
+- 正文装不下时:**不许缩字号**,不许退回"全屏蒙版压字"。把溢出内容塞进 speaker notes(写在 `<aside data-speaker-note>` 里),或拆页
+- 详见 `references/safe-zone-spec.md`(已按 1920×1080 像素校准)
 
 ### 2. Image prompt 必须 V2 四段式
 
-- `描述 / Composition / Style / Do not include` 四段齐全
-- 安全区百分比写死在 Composition 段（"top 15% / bottom 15% fade to void"）
-- 色彩用 token + hex 双写（"warm coral, hex #FF6B47"）
-- 模板和示例见 `references/image-prompts-v2.md`
+- 描述 / Composition / Style / Do not include 四段齐全
+- 安全区百分比写死在 Composition 段
+- 色彩用 token + hex 双写
+- 详见 `references/image-prompts-v2.md`
 
 ### 3. Nano Banana 比例有限
 
-- 支持：16:9 / 4:3 / 1:1 / 3:4 / 9:16
-- **不支持 21:9** — 需要超宽时走变通（拼接 / 裁切 / HF 铺底 + 暗罩）
-- 细则见 `references/nano-banana-ratios.md`
+- 支持 16:9 / 4:3 / 1:1 / 3:4 / 9:16
+- **不支持 21:9** — 见 `references/nano-banana-ratios.md` 的三种变通
 
-## 完整 Pipeline
+## 完整 Pipeline(v1.0)
 
 ```
-image-prompts.md                notes-map.js
-       │                              │
-       ▼  (Nano Banana)               ▼
-  images/*.png                 溢出文案映射
-       │                              │
-       ▼  (tools/scrim-bake.js)       │
- images/*-scrimmed.png                │
-       │                              │
-       ▼  (CSS background)            │
-   slides/*.html ──────────────► html2pptx.js ──► pptx
+立论文档(/ppt-classify + /ppt-research-setup)
        │
-       ▼ preview
-   player.html  +  tools/check-overflow.js
+       ▼
+image-prompts.md(V2 四段式)
+       │
+       ▼ (Nano Banana / agent 跑)
+slides/<deck-id>/assets/*.png
+       │
+       ▼ (CSS scrim,不再烘焙 PNG)
+slides/<deck-id>/index.tsx
+       │     │
+       │     └── 顶部 design: DesignSystem(从 themes/dark-teal.md 复制)
+       │     └── layout helper(从 layouts/*.md 复制)
+       │     └── 每个 Page 组件实现一页
+       │
+       ▼
+open-slide pnpm dev → HMR < 1s 实时预览
+       │
+       ├── inspector 点元素加 @slide-comment
+       ├── /apply-comments agent 改 JSX
+       └── 反复迭代
+       │
+       ▼
+pnpm build → dist/ 静态站点
+   或 export PDF
+   或 部署 Vercel
 ```
 
-**文件角色**：
+## 文件角色
 
-| 文件 | 作用 | 是否改 |
+| 文件/目录 | 作用 | 是否改 |
 |---|---|---|
-| `pipeline/html2pptx.js` | HTML→PPTX 渲染器，处理定位/文字/图片/shape/overflow 检测 | **不改** |
-| `templates/build.js` | 构建入口。支持 `--lint`（只校验不出 pptx）/ `--strict`（首错即停） | 改元信息（title/author/文件名） |
-| `templates/player.html` | 无依赖 HTML 播放器，键盘翻页 + 全屏 + 缩略图 | 可选：填 TITLES 供缩略图显示 |
-| `templates/tools/scrim-bake.js` | Sharp 把 scrim 暗罩烘进背景 PNG（HTML2PPTX 不认 CSS gradient） | 按项目填 PAIRS 数组 |
-| `templates/tools/check-overflow.js` | Playwright 验证每页 ≤ 540px（preview 级别） | 不改 |
-| `templates/tools/fix-html-for-pptx.js` | 扫 `<p class="...">` 有 background/border 的，自动转 `<div><p>...</p></div>` | 不改 |
-| `templates/themes/*.css` | 主题 token — `dark-coral.css`（默认）/ `dark-teal.css` | 换主题只改这里 |
-| `templates/layouts/*.html` | 版式骨架库（见下方决策树） | 复制后填内容 |
-| `templates/notes-map.js` | 溢出文案映射 `{ slideNum: "notes..." }` | 按需填 |
-| `templates/package.json` | 依赖（playwright / pptxgenjs / sharp） | 不改 |
-| `references/html2pptx-contract.md` | **必读** · HTML/CSS 合法子集 + 常见错误修复套路 | 不改 |
+| `references/open-slide-bootstrap.md` | **必读** · 从零跑 open-slide 项目的速成 | 不改 |
+| `references/safe-zone-spec.md` | **必读** · 安全区 + 1920×1080 单位换算 | 不改 |
+| `references/image-prompts-v2.md` | **必读** · V2 四段式 prompt 规范 | 不改 |
+| `references/nano-banana-ratios.md` | 出图比例约束 + 21:9 变通 | 不改 |
+| `references/workflow-multi-skill.md` | 5 阶段全链路工作流(WHY/WHAT/VISUAL/HOW/QA) | 不改 |
+| `themes/dark-teal.md` + `dark-teal.demo.tsx` | 技术章节默认主题(冷色),paste-ready | 用户用 |
+| `themes/dark-coral.md` + `dark-coral.demo.tsx` | 人文章节主题(暖色) | 用户用 |
+| `layouts/hero-cover.md` | 全幅背景 layout 模板 | 用户用 |
+| `layouts/chapter-cover.md` | 章节扉页(800px 竖图 + 双栏) | 用户用 |
+| `layouts/takeaway.md` | 每章结语(800px 右图 + 金句 + NEXT) | 用户用 |
+| `layouts/thesis.md` | 居中陈述(全片论点 / 收尾) | 用户用 |
+| `layouts/README.md` | layout 决策树 + 项目特化版式索引 | 不改 |
 
-## 版式决策树（选 layout 时走这个）
+## 版式决策树(选 layout 时走这个)
 
 ```
-问 1：这页是章节边界 / 封面 / 封底吗？
-  是 → slide-cover.html (HF)
+问 1:这页是封面 / 章节边界 / 收尾吗?
+  是 → hero-cover(全幅背景 + 大标题)
   否 → 继续
 
-问 2：这页只有一句金句（≤40 字），别的都稀释它？
-  是 → slide-quote.html
+问 2:这页是章节起始(承接上一章 + 预告本章)?
+  是 → chapter-cover(800px 竖图 + 大章号 + 双栏 + echo)
   否 → 继续
 
-问 3：这页是"数字说话"（KPI / 成绩单 / 市场数据）？
-  是 → 只有一个核心数字？
-        是 → slide-quote.html（把数字放大成金句）
-        否（3~4 个并列数字）→ slide-stats.html
+问 3:这页是每章结束的金句(takeaway 一句话)?
+  是 → takeaway(800px 右图 + 金句 + NEXT 块)
   否 → 继续
 
-问 4：这页是"按时间/阶段讲流程"？
-  是 → slide-timeline.html（3~5 个节点）
-  否 → 继续
-
-问 5：这页是"对比/并列"？
-  是 → 几项？
-        2 项 → slide-2col.html（before/after, A/B）
-        3 项 → slide-3col.html（三段论）
-        4+ → 拆页或 stats
-  否 → 继续（下面是默认主力）
-
-问 6：有一个核心视觉隐喻 + 2~4 条要点？
-  是 → 前后页已连续 r34 两次？
-        是 → slide-l34.html（换方向打破节奏）
-        否 → slide-r34.html（默认）
-  否 → 停下来想想这页要讲什么，版式够不够（不够再扩）
-
-每次选完问自己：
-  - 前后三页是否都是同一个版式？→ 考虑切镜像或换 layout
-  - quote 页是否超过 3 页？→ 金句稀释了，降级成 r34
+问 4:这页是全片中心论点 / 收尾反问 / 单页独占的金句?
+  是 → thesis(居中大字 + 副标题)
+  否 → 不在 4 个核心版式里,写 inline 组件——
+       参考 ep10 的 TOC grid / Meta finding / Three stat cards(都是项目特化)
+       源码:~/Github/greentrain-studio/main/episodes/ep10-ai-ppt/open-slide-deck/slides/ep10-nvidia-moat/index.tsx
 ```
 
-**版式目录**（8 个）：
+更多选择细节看 `layouts/README.md`。
 
-| Layout | 用途 | 关键信号 |
+## 主题决策
+
+| 调性 | 选哪个 | 例子 |
 |---|---|---|
-| `slide-cover.html` | HF 全幅，封面/章节/封底 | 有背景图 + 大标题 |
-| `slide-quote.html` | 居中金句 | 一句话，≤40 字 |
-| `slide-stats.html` | 2×2 数字格子 | 3~4 个并列 KPI |
-| `slide-timeline.html` | 水平时间轴 | 3~5 阶段/节点 |
-| `slide-2col.html` | 双栏对比 | 二元对比（A/B） |
-| `slide-3col.html` | 三栏并列 | 三段论 / 三种 X |
-| `slide-r34.html` | 右图 + 左文（主力） | 一个论点 + 2~4 bullet |
-| `slide-l34.html` | 左图 + 右文（镜像） | 同 r34，但换方向 |
+| 技术 / 研究 / 算力 / 架构 | `dark-teal` | EP10 NVIDIA 护城河 |
+| 人文 / 商业故事 / 产品发布 / 文化解读 | `dark-coral` | 早期 EP01-08 偏暖调的内容 |
 
-每个 layout 文件顶部有 `USE WHEN` / `DO NOT USE WHEN` 注释，选不定就打开文件看。
-
-## 扩展约束（给未来的自己）
-
-**新增 layout / theme 前必须回答**：
-
-1. 现有版式为什么不够？举一个具体 slide 说不通的场景。
-2. 新版式的 USE WHEN / DO NOT USE WHEN 分别是什么？
-3. 这条决策树改动后，是否让"选择更容易"而不是"更纠结"？
-
-如果这三题任何一题答不清，**这个版式就不该加**。扁平地堆 layout 会让 Claude 面对 skill 时选择困难，信息结构 ≫ 选项数量。
-
-**新增 theme 同理**：说清"为什么现有 dark-coral / dark-teal 不够"再加。
+两套主题是**镜像设计**:Typography / Layout / padding 完全一致,**只差 accent 颜色**。这意味着同一个 layout 可以在两个主题里无缝复用。
 
 ## 标准执行流程
 
-1. **明确主题与页数** — 先问用户：主题色系（默认暗色 CORAL）、页数、是否需要封面/目录/封底
-2. **先读契约** — `references/html2pptx-contract.md`，了解 HTML/CSS 合法子集，避免撞雷
-3. **生成 HTML slides** — 基于 `templates/layouts/` 骨架，每页先写 HTML
-4. **preview 验证** — 用 `templates/player.html` 翻页 + `node tools/check-overflow.js` 跑 540px 硬边界
-5. **生成 image prompts** — 按 V2 四段式格式，输出到 `image-prompts.md`，用户拿去 Nano Banana 批量跑
-6. **收齐图片 + 烘 scrim** — 把图放进 `images/`，配置 `tools/scrim-bake.js` 里的 PAIRS，`node tools/scrim-bake.js` 烘出 `*-scrimmed.png`
-7. **先 lint** — `node build.js --lint`，一次看齐所有 slide 的契约违规（不写 pptx）
-8. **修违规** — 能机械修的跑 `node tools/fix-html-for-pptx.js`（把带 bg 的 `<p>` 自动包 `<div><p>`）；手动修余下的
-9. **填 notes-map.js** — 溢出内容、口播补偿都进这里
-10. **出 pptx** — `node build.js`
+1. **立论先行** — `/ppt-classify` + `/ppt-research-setup`(详见 `references/workflow-multi-skill.md`)
+2. **scaffold open-slide 项目** — `npx @open-slide/cli@latest init` + 复制 visual-deck 主题(详见 `references/open-slide-bootstrap.md`)
+3. **拆页 + 选 layout** — 按上方决策树走,每页一个 Page 组件
+4. **生成 image prompts** — V2 四段式,输出到 `image-prompts.md`,用户/agent 跑 Nano Banana
+5. **写 JSX** — 从 `themes/<theme>.md` 复制 helper components,从 `layouts/*.md` 复制版式模板,改成你的内容
+6. **dev server 预览** — `pnpm dev`,改 JSX 实时刷新
+7. **inspector 协作** — 浏览器点元素加 `@slide-comment` 批注,跑 `/apply-comments` 让 agent 改
+8. **交付** — `pnpm build` 出静态站点,或 export PDF
 
-## 关键陷阱（Claude 自己最容易犯的）
+## 关键陷阱(agent 最容易犯的)
 
-**HTML/CSS 契约违规**（详见 `references/html2pptx-contract.md`）：
+**版式相关**:
+- ❌ 用 4 个核心 layout 装不下的内容时去 hack layout(改 padding / 缩字号) → **写 inline 组件**,参考 ep10 实战
+- ❌ TOC / KPI 卡片用 `array.map` 渲染 → 违反 slide-authoring 硬规则。**显式 `<Card />` × N 实例化**,inspector 才能编辑单个
+- ❌ Chapter cover 双栏长度悬殊 → 改成单栏或拆页
 
-- ❌ 在元素上用 CSS gradient —— 必须 `tools/scrim-bake.js` 烘进 PNG
-- ❌ inline `<span>` 上写 `margin-*` —— 用 `padding-*` 或 `display: block` + 父 `<p>`
-- ❌ `<p>` / `<h1-6>` / `<ul>` 有 `background` / `border*` / `box-shadow` —— 包 `<div class="X"><p>...</p></div>`，或跑 `tools/fix-html-for-pptx.js` 自动修
-- ❌ `<div>` 里直接放文字（mixed content）—— 文字必须用 `<p>` 等包起来
-- ❌ `<p>` 以 `*` / `-` / `•` 起头 —— 被当成手动 bullet 拒收
-- ❌ 内容塞到离 slide 底边 < 0.5"（36pt）—— 预览能过，build 不过。用 `--lint` 预检
+**主题相关**:
+- ❌ 一份 deck 里混用 dark-teal 和 dark-coral 章节 → 频道身份混乱。如果章节调性不同,拆成不同 deck
+- ❌ 把 `Accent` 当装饰用(每页 5+ 处) → accent 是强调点,过度使用失去强调意义。一页 1-2 处,thesis 页最多 2 处
 
-**其他常见坑**：
+**Nano Banana / 图片相关**:
+- ❌ 需要 21:9 时强行让 Nano Banana 出 → 不支持,见 ratios.md 的变通
+- ❌ 用 base64 data URL 嵌图 → open-slide 用 ES module import,从 `./assets/` 引用
+- ❌ scrim 调到 0.85+ 盖住整张图 → 图就白生成了
 
-- ❌ "字装不下就缩小到 10pt" —— 违反约束 1，必须 notes
-- ❌ "这个图要 21:9 超宽" —— Nano Banana 不支持，要么 16:9 HF 裁掉两侧，要么拼图
-- ❌ Image prompt 漏了 "Do not include" 段 —— 会生成文字/logo/水印污染
-- ❌ HTML body 尺寸写错（非 `720pt × 405pt` for 16:9）—— `html2pptx.js` 会抛 dimension mismatch 错误
-- ❌ 在 `build.js` 里硬编码页数 —— 用 `fs.readdirSync('slides/')` 动态枚举
+**open-slide 框架相关**:
+- ❌ 加 npm 依赖 → framework 禁止,只能用 react + 标准 web API
+- ❌ 在 `slides/<id>/` 里建 sibling `.tsx` 文件 → 禁止,helper 组件必须 inline 在同一个 index.tsx
+- ❌ 改 package.json / open-slide.config.ts → 禁止
+- ❌ 用 `overflow: hidden/scroll` 隐藏溢出 → canvas 不滚动,溢出 = 内容消失。**改文案或拆页**
 
-## 主题系统
+## 与 open-slide 框架自带 skill 的关系
 
-所有色彩/字体/字号/padding 都在 `templates/themes/*.css` 里作为 CSS 变量。每个 slide HTML 顶部 `<link rel="stylesheet" href="../themes/<theme>.css">` 引用，内部 `<style>` 只用 `var(--xxx)`，**不许写死 hex**。
+open-slide 框架本身自带 5 个 agent skill:`/create-slide` / `/slide-authoring` / `/apply-comments` / `/create-theme` / `/current-slide`。
 
-**可选主题**：
-- `dark-coral.css`（默认） — 暖色，偏情感/洞察/人文调性
-- `dark-teal.css` — 冷色，偏技术/架构/理性调性
+**visual-deck 与它们不冲突,而是分层**:
 
-**切主题**：改所有 slide HTML 里 `<link>` 的路径即可（或者全 deck 同一主题就用项目级 sed/find 一键替换）。
+| 层 | 谁负责 |
+|---|---|
+| **通用规则**(1920×1080 canvas、type scale 范围、anti-patterns) | open-slide 的 `/slide-authoring` |
+| **绿皮火车特化**(dark-teal/coral 主题、4 个 layout、V2 prompt、Nano Banana 比例) | visual-deck(本 skill) |
+| **流程编排**(scaffold / dev server / inspector 工作流) | open-slide 的 `/create-slide` + `/apply-comments` |
+| **PPT 立论**(分类、研究框架、storyline 评审) | `/ppt-classify` / `/ppt-research-setup` / `/ppt-narrative-review` |
 
-**换主题**：只改 `theme.css` 一个文件，所有 slide 跟着变。theme.css 末尾注释了暗色 TEAL / 浅色 NAVY 两套示例变量。
+**做新 deck 时的建议路径**:
+1. 先 `/ppt-classify` 定 PPT 类型
+2. 启动 open-slide 项目(`/create-slide` 或手动 scaffold)
+3. 写 JSX 时,**读 visual-deck 的 layouts/<选定版式>.md + themes/<选定主题>.md**,从模板复制粘贴
+4. inspector 反馈用 `/apply-comments`
 
-**核心 token**：
-- `--bg / --fg / --muted / --dim / --faint` — 底/正文/次/最弱/footer
-- `--accent / --accent-2` — 主/副点缀色
-- `--font-sans`、`--fs-hero/title/subtitle/lede/body/label/source` — 字体字号
-- `--pad-slide / --pad-r34 / --pad-l34` — 三种 layout 的 padding
-- `--scrim-base / --scrim-left / --scrim-heavy` — 暗罩透明度档位
+## v0.x → v1.0 迁移指南
+
+如果你有用 v0.x 做过的旧 deck:
+
+1. **HTML 文件**:逐页转 JSX,参考 `layouts/` 里的对应版式
+2. **CSS 变量**:从 `var(--accent)` 换成 `palette.accent`(hex 直写或用 `var(--osd-accent)`)
+3. **背景图**:`background: url(../images/...)` → ES module import + CSS gradient(scrim 不再烘焙)
+4. **notes-map.js**:废弃,改成每页 `<aside data-speaker-note>` 内联
+5. **build.js**:废弃,改用 `pnpm dev` / `pnpm build`
+6. **单位**:pt × 2.667 = px(safe-zone-spec.md 末尾有完整对照表)
+
+参考实战:ep10 NVIDIA 护城河 deck 已完成 16 页迁移,源码可对照(`~/Github/greentrain-studio/main/episodes/ep10-ai-ppt/open-slide-deck/`)。
+
+## PPTX Roadmap
+
+v1.0 **不输出 .pptx 文件**。这是有意识的取舍——绿皮火车实际工作流(YouTube + 现场演讲)不需要 .pptx,只需要 deck 在浏览器里看得清。
+
+**未来计划**:把 v0.x 时代的 HTML→pptxgenjs 管线封装成 **open-slide 的 export-pptx 命令**,贡献到 open-slide 上游。届时任何用 open-slide 的 deck(包括非绿皮火车用户)都能受益,而 visual-deck 自己不需要维护这套管线。
+
+时间表未定,需要时再开工。
+
+## 扩展约束(给未来的自己)
+
+**新增 layout 之前必须回答**:
+1. 现有 4 个版式为什么不够?举一个具体 slide 说不通的场景
+2. 新版式的 USE WHEN / DO NOT USE WHEN 分别是什么?
+3. 它真的可复用,还是只在一个 deck 出现过?(只用一次就别抽象,直接 inline 在 deck 里写)
+
+**新增 theme 之前必须回答**:
+1. dark-teal / dark-coral 为什么不够?
+2. 新 theme 与现有两个的镜像关系是什么(palette 哪些不变,哪些变)
+3. 这套主题的 "适用调性" 在频道里有几集会用?(一集就别加)
+
+扁平堆叠 layout / theme 会让 agent 选不到对的——**信息结构 ≫ 选项数量**。
 
 ## 快速开始
 
-看 `examples/minimal/` —— 2 页可跑的最小例子。复制整个目录到新项目，`npm install` 后 `node build.js` 就有 pptx。
-
-推荐的**改一页验证一次**反馈循环：
 ```bash
-node tools/check-overflow.js   # 1. 540px preview 硬边界
-node build.js --lint           # 2. 契约完整校验（所有违规一次列齐）
-node build.js                  # 3. 真正出 pptx
+# 1. scaffold
+npx @open-slide/cli@latest init my-deck --use-pnpm --locale zh-CN --no-git
+cd my-deck
+
+# 2. 复制主题(从 visual-deck 仓库)
+cp ~/Github/skills/visual-deck/themes/dark-teal.* themes/
+
+# 3. 跑 dev
+pnpm dev   # → http://localhost:5173
+
+# 4. 写第一张 slide(参考 references/open-slide-bootstrap.md)
+mkdir slides/<deck-id>
+# ... 见 bootstrap 文档第 4 步
 ```
+
+完整步骤见 `references/open-slide-bootstrap.md`。

@@ -1,12 +1,26 @@
 ---
 name: visual-slides
-description: Generate "image + text" style visual decks directly in Google Slides via the gws CLI. Uses a hand-authored master template with {{placeholders}}, then injects content via slides.batchUpdate (replaceAllText + replaceAllShapesWithImage) and references Nano Banana backgrounds uploaded to Drive. Use when the deck must live in Google Slides (shareable link, comments, collaboration) AND the layout language matches the visual-deck design system. NOT for offline .pptx delivery — use visual-deck for that.
-version: 0.1.0
+description: [DEPRECATED — narrow use only] Inject content into a pre-existing hand-authored Google Slides master template via gws CLI batchUpdate (replaceAllText + replaceAllShapesWithImage). Use ONLY when (1) a polished Slides master template already exists on Drive and (2) you need to batch-fill it with N variants of content. For all other "make a visual deck" use cases (general drafting, ep-style content decks, first-time deck), use the visual-deck skill instead — it ships better visual fidelity via open-slide and no template wall.
+version: 0.2.0
 ---
 
-# visual-slides — 视觉版 Google Slides 注入器
+> ## ⚠️ Deprecated as default deck skill (2026-05-14)
+>
+> **Use `visual-deck` v1.0** (open-slide based) for general deck authoring. This skill (`visual-slides`) survives **only for one narrow scenario**:
+> - You already have a polished Slides master template authored by hand on Drive
+> - You need to inject N different content sets into that template (e.g. monthly report, client brief variants)
+>
+> If you're starting fresh, want production-quality visual fidelity, or don't have an existing template — **`visual-deck` is the right tool**, not this one.
+>
+> **Why deprecated**: 2026-05-14 ep10 NVIDIA Moat experiment proved that without a pre-existing hand-authored template, the `gws slides batchUpdate` pipeline produces wireframe-quality output regardless of how good `inject.py` is. The skill works correctly; the path is just wrong for "single-shot visual deck" — which is 90% of what we author. Kept alive for the 10% batch-fill case.
+>
+> Long-term plan: PPTX export will be contributed to open-slide upstream. Drive-collab decks will likely consolidate to "open-slide → Drive sync" rather than this gws-injection path.
 
-`visual-deck` 的"亲戚":同一套视觉设计语言(安全区、V2 image prompt、Nano Banana 暗罩),但输出目标从本地 `.pptx` 文件换成**线上 Google Slides 文档**。技术路线完全不同——不再走 HTML→PPTX,改走"人工模板 + `gws slides batchUpdate` 注入"。
+---
+
+# visual-slides — 视觉版 Google Slides 注入器(narrow-use)
+
+`visual-deck` 的"亲戚":同一套视觉设计语言(安全区、V2 image prompt、Nano Banana 暗罩),但输出目标从本地文件换成**线上 Google Slides 文档**。技术路线:不走渲染,走"人工模板 + `gws slides batchUpdate` 注入"。
 
 ## 何时触发
 

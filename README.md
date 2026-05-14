@@ -327,31 +327,35 @@ python twitter-downloader/scripts/download_tweet.py "URL" --url-only
 
 #### visual-deck
 
-Generate "image + text" style visual PPT decks via an HTML→PPTX pipeline. Uses safe-zone typography (text only lands in designated image regions), overflow-to-notes discipline (never shrink fonts — spillover goes into speaker notes), and Nano Banana backgrounds. Ships with 8 layouts (cover, quote, l34/r34, 2col, 3col, timeline, stats) and a theme system (dark-coral, dark-teal). Intended for evangelism / internal sharing / client-facing decks where layout is image-driven; **not** for data reports or text-heavy docs.
+**v1.0 (2026-05-14)** — Green Train's design system layered on top of the [open-slide](https://github.com/1weiho/open-slide) React framework. Ships two channel themes (`dark-teal` for technical chapters, `dark-coral` for narrative chapters), four core layout patterns (`hero-cover` / `chapter-cover` / `takeaway` / `thesis`), the V2 four-segment Nano Banana image prompt format, and safe-zone typography discipline (text only lands in designated image regions, overflow goes into speaker notes, never shrink fonts). Output is a static HTML site or PDF via open-slide's build — no .pptx in v1.0.
 
 ```bash
-# Run the minimal example (playwright + pptxgenjs + sharp required)
-cd visual-deck/examples/minimal
-npm install
-node build.js   # → output/deck.pptx
+# Scaffold an open-slide project and apply Green Train's theme
+npx @open-slide/cli@latest init my-deck --use-pnpm --locale zh-CN --no-git
+cd my-deck
+cp ~/Github/skills/visual-deck/themes/dark-teal.* themes/
+pnpm dev   # → http://localhost:5173
+# Then read visual-deck/layouts/*.md and copy-paste JSX templates into slides/<id>/index.tsx
 ```
 
-**Dependencies**: Node.js 18+, `npm install` inside the example/template directory pulls in `playwright`, `pptxgenjs`, and `sharp`.
+See `visual-deck/SKILL.md` for the full v1.0 contract and the v0.x → v1.0 migration guide.
 
-#### visual-slides
+**Dependencies**: Node.js 18+, pnpm, open-slide via `npx @open-slide/cli`.
 
-Inject content into a hand-authored Google Slides template via the [`gws` CLI](https://github.com/googleworkspace/cli). Shares the visual-deck design language (safe-zone typography, V2 four-segment image prompts, Nano Banana backgrounds, scrim baking) but outputs to a live Google Slides URL instead of a local `.pptx`. Pipeline: copy template deck → upload images to Drive (made public-readable) → `slides.batchUpdate` with `replaceAllText` + `replaceAllShapesWithImage`. Best for decks that need to live on Drive (collaboration, comments) or for templates filled with many content variants. **Not** a drop-in for visual-deck — different output target, different constraints; see `visual-slides/SKILL.md` for the comparison.
+**Roadmap**: `.pptx` export is planned as an open-slide upstream contribution (former v0.x pptxgenjs pipeline). No fixed date.
+
+#### visual-slides (deprecated as default · narrow-use only)
+
+**Deprecated 2026-05-14.** Inject content into a pre-existing hand-authored Google Slides master template via the [`gws` CLI](https://github.com/googleworkspace/cli) batchUpdate. Survives only for one narrow case: a polished Slides master already exists on Drive AND you need to batch-fill N content variants into it (monthly reports, multi-client briefs). For all "make a visual deck" use cases — use `visual-deck` instead.
 
 ```bash
-# Walk through the minimal 2-slide example
-cd visual-slides/examples/minimal
-cat README.md
-python ../../scripts/validate_plan.py content-plan.json
-python ../../scripts/inject.py content-plan.json --dry-run
-python ../../scripts/inject.py content-plan.json
+# Existing pipeline still works for the narrow case:
+python visual-slides/scripts/validate_plan.py content-plan.json
+python visual-slides/scripts/inject.py content-plan.json --dry-run
+python visual-slides/scripts/inject.py content-plan.json
 ```
 
-**Dependencies**: `gws` CLI on PATH + `gws auth login` completed; Python 3.10+ with `Pillow` (for scrim baking).
+**Dependencies**: `gws` CLI + `gws auth login`; Python 3.10+ with `Pillow`.
 
 #### youtube-downloader
 

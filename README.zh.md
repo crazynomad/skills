@@ -327,31 +327,35 @@ python twitter-downloader/scripts/download_tweet.py "URL" --url-only
 
 #### visual-deck
 
-通过 HTML→PPTX 流水线生成"图+文"风格的视觉化 PPT。核心约束三条：**文字只进图像安全区**（只排在留白/暗色区里）、**溢出走 notes**（字号不缩，溢出内容塞进演讲者备注）、**Nano Banana 背景图**统一视觉语言。内置 8 种版式（cover / quote / l34 / r34 / 2col / 3col / timeline / stats）和主题系统（dark-coral、dark-teal）。适用于布道版 / 对外方案 / 内部分享类 PPT；**不适用**纯数据报表或纯文字文档。
+**v1.0 (2026-05-14)** — 绿皮火车的 deck 设计系统,落在 [open-slide](https://github.com/1weiho/open-slide) React 框架之上。包含两套频道主题(`dark-teal` 技术章节冷色 / `dark-coral` 人文章节暖色)、四个核心版式词汇(`hero-cover` / `chapter-cover` / `takeaway` / `thesis`)、V2 四段式 Nano Banana image prompt 规范、以及安全区/溢出/字号不缩的编辑纪律。v1.0 输出静态 HTML 站点或 PDF,**不出 `.pptx`**。
 
 ```bash
-# 跑通最小示例（需要 playwright + pptxgenjs + sharp）
-cd visual-deck/examples/minimal
-npm install
-node build.js   # → output/deck.pptx
+# 启动 open-slide 项目 + 套上绿皮火车主题
+npx @open-slide/cli@latest init my-deck --use-pnpm --locale zh-CN --no-git
+cd my-deck
+cp ~/Github/skills/visual-deck/themes/dark-teal.* themes/
+pnpm dev   # → http://localhost:5173
+# 然后看 visual-deck/layouts/*.md 复制粘贴 JSX 模板到 slides/<id>/index.tsx
 ```
 
-**依赖**：Node.js 18+，进入 example/template 目录执行 `npm install` 会拉取 `playwright`、`pptxgenjs`、`sharp`。
+完整 v1.0 契约和 v0.x → v1.0 迁移指南见 `visual-deck/SKILL.md`。
 
-#### visual-slides
+**依赖**: Node.js 18+、pnpm、`npx @open-slide/cli` 拉的 open-slide framework。
 
-通过 [`gws` CLI](https://github.com/googleworkspace/cli) 把内容注入到一份**手工维护的 Google Slides 母板**里。和 visual-deck 共用同一套设计语言（安全区文字、V2 四段式 image prompt、Nano Banana 背景、scrim 烘焙），但输出从本地 `.pptx` 换成线上 Slides URL。流程：复制母板 → 上传图片到 Drive（自动设公开可读）→ `slides.batchUpdate` 用 `replaceAllText` + `replaceAllShapesWithImage` 注入。适用：需要协作评论的线上 deck、同一模板填多套数据。**不适用**：一次性离线 PPT 文件（用 visual-deck），或视觉精度要求极高（Slides API 字体/阴影表达力较弱）。详细对比见 `visual-slides/SKILL.md`。
+**Roadmap**: `.pptx` 输出计划作为 open-slide 上游 contribution(把 v0.x 的 pptxgenjs 管线封装成 export 命令)。无固定时间表。
+
+#### visual-slides (已弃用 · 仅窄场景保留)
+
+**2026-05-14 起弃用**。通过 [`gws` CLI](https://github.com/googleworkspace/cli) 把内容批量注入**已经手工做好的** Google Slides 母板。只剩一种用途:Drive 上有一份精心维护的母板 + 需要把 N 套内容填进去(月报、多客户方案变体)。所有"做视觉化 deck"的通用场景请用 `visual-deck`。
 
 ```bash
-# 跑通两页最小示例
-cd visual-slides/examples/minimal
-cat README.md
-python ../../scripts/validate_plan.py content-plan.json
-python ../../scripts/inject.py content-plan.json --dry-run
-python ../../scripts/inject.py content-plan.json
+# 旧管线仍能跑(窄场景):
+python visual-slides/scripts/validate_plan.py content-plan.json
+python visual-slides/scripts/inject.py content-plan.json --dry-run
+python visual-slides/scripts/inject.py content-plan.json
 ```
 
-**依赖**：`gws` CLI 已装并完成 `gws auth login`；Python 3.10+ 安装 `Pillow`（scrim 烘焙）。
+**依赖**: `gws` CLI + `gws auth login`、Python 3.10+ 装 `Pillow`。
 
 #### youtube-downloader
 
