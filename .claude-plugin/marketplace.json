@@ -11,10 +11,11 @@
   "plugins": [
     {
       "name": "greentrain-media",
-      "description": "Green Train media skills: download videos from YouTube and 1000+ sites, download X/Twitter videos, download Apple Podcasts episodes, convert PDFs to images, generate viral video titles from subtitles, local TTS/STT on Apple Silicon, generate visual decks on open-slide with Green Train's design system (visual-deck v1.0), and a deprecated batch-template Slides injector (visual-slides — narrow use only)",
+      "description": "Green Train media skills: download videos from YouTube and 1000+ sites, download X/Twitter videos, download Apple Podcasts episodes, convert PDFs to images, generate viral video titles from subtitles, transcribe audio/video/URLs to txt/srt/vtt/json locally with mlx_whisper, local TTS/STT on Apple Silicon, generate visual decks on open-slide with Green Train's design system (visual-deck v1.0), and a deprecated batch-template Slides injector (visual-slides — narrow use only)",
       "source": "./",
       "strict": false,
       "skills": [
+        "./generate-transcript",
         "./pdf-to-images",
         "./podcast-downloader",
         "./srt-title-generator",
