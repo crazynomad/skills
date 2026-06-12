@@ -63,6 +63,7 @@ npx skills add crazynomad/skills
 | **greentrain-media** | 视频/播客下载、PDF 转换、标题生成、语音合成/识别、视觉化 PPT 生成 | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [visual-slides](#visual-slides), [youtube-downloader](#youtube-downloader) |
 | **greentrain-files** | macOS 磁盘清理、文件整理、文档智能 | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 | **greentrain-planning** | PPT 方法论：先想清楚再开 PowerPoint。PPT 分类、研究型立论、故事线评审 | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
+| **greentrain-perspectives** | 人物思维框架顾问，由女娲造人（nuwa-skill）蒸馏 | [jordan-peterson-perspective](#jordan-peterson-perspective) |
 
 更多详情请访问 **https://skills.sh/docs**。
 
@@ -445,6 +446,20 @@ python youtube-downloader/scripts/download_video.py "URL" -o ./videos
 
 **依赖**：无（纯提示词 skill）
 
+### 人物视角
+
+用[女娲造人（nuwa-skill）](https://github.com/alchaincyf/nuwa-skill)蒸馏的「人物思维操作系统」：多 Agent 深度调研 → 心智模型提炼 → 可运行的人物 SKILL.md。
+
+#### jordan-peterson-perspective
+
+乔丹·彼得森（「龙虾教授」）思维顾问。基于 6 个维度 216 个来源（著作、辩论/访谈逐字稿、X 发帖、外部批评、决策记录、完整时间线，一手占比约 50%）蒸馏。包含 6 个心智模型（秩序—混沌、神话即心理技术、等级结构、责任先于权利、行为即信念、意识形态即附身）、8 条决策启发式、完整表达 DNA 及中文输出适配。
+
+**使用时机**：意义危机、责任与成长、地位焦虑、文化争议分析——「用彼得森的视角…」「整理好你的房间」「龙虾教授」。
+
+**内置护栏**：被外部驳斥过的主张带失效模式标注（如龙虾-血清素强主张）；涉及自伤或用药话题时跳出角色——这是思维框架 skill，不是心理治疗。
+
+**依赖**：无（纯提示词；事实型问题会调用 WebSearch）
+
 ## 目录结构
 
 每个技能独立一个目录，通过 `SKILL.md` 定义接口、用法和依赖。
@@ -466,6 +481,7 @@ skills/
 ├── ppt-classify/
 ├── ppt-research-setup/
 ├── ppt-narrative-review/
+├── jordan-peterson-perspective/
 └── README.md
 ```
 

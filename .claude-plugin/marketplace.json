@@ -39,6 +39,15 @@
       ]
     },
     {
+      "name": "greentrain-perspectives",
+      "description": "Green Train perspective skills: persona thinking-framework advisors distilled with nuwa-skill. Currently includes jordan-peterson-perspective (the 'lobster professor') — 6 mental models, 8 decision heuristics, full expression DNA, with built-in failure-mode annotations and safety boundaries.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./jordan-peterson-perspective"
+      ]
+    },
+    {
       "name": "greentrain-planning",
       "description": "Green Train planning skills: think-before-you-slide PPT methodology. Classify PPT type (pitch / research / teaching / narrative), set up research-driven thesis with six-question specificity diagnostic, and review storyline for structural fit. Pairs with visual-deck for the full pipeline.",
       "source": "./",

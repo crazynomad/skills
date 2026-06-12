@@ -63,6 +63,7 @@ Simply tell Claude Code:
 | **greentrain-media** | Video/podcast downloading, PDF conversion, title generation, TTS/STT, visual PPT generation | [pdf-to-images](#pdf-to-images), [podcast-downloader](#podcast-downloader), [srt-title-generator](#srt-title-generator), [tts](#tts), [twitter-downloader](#twitter-downloader), [visual-deck](#visual-deck), [visual-slides](#visual-slides), [youtube-downloader](#youtube-downloader) |
 | **greentrain-files** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 | **greentrain-planning** | Think-before-you-slide PPT methodology: classify, research-driven thesis, storyline review | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
+| **greentrain-perspectives** | Persona thinking-framework advisors distilled with nuwa-skill | [jordan-peterson-perspective](#jordan-peterson-perspective) |
 
 For more details, visit **https://skills.sh/docs**.
 
@@ -445,6 +446,20 @@ Review a PPT storyline for structural fit, pacing, and key-visual anchors. **Typ
 
 **Dependencies**: None (prompt-based skill)
 
+### Perspectives
+
+Persona "thinking operating systems" distilled with [nuwa-skill](https://github.com/alchaincyf/nuwa-skill) (女娲造人): multi-agent deep research → mental-model extraction → runnable persona SKILL.md.
+
+#### jordan-peterson-perspective
+
+Jordan Peterson (the "lobster professor") as a thinking advisor. Distilled from 216 sources across 6 dimensions (books, debate/interview transcripts, X posts, external criticism, decision records, full timeline; ~50% primary sources). Ships 6 mental models (order–chaos, myth as psychological technology, hierarchies, responsibility before rights, belief-as-action, ideology-as-possession), 8 decision heuristics, and a full expression DNA with Chinese-output adaptation.
+
+**When to Use**: meaning crises, responsibility and growth questions, status anxiety, culture-war analysis — "用彼得森的视角…", "整理好你的房间", "龙虾教授".
+
+**Built-in guardrails**: externally refuted claims carry failure-mode annotations (e.g. the lobster-serotonin strong claim); a safety boundary breaks character on self-harm or medication topics. It is a thinking-framework skill, not therapy.
+
+**Dependencies**: None (prompt-based; uses WebSearch for fact-dependent questions)
+
 ## Structure
 
 Each skill is contained in its own directory with a `SKILL.md` file defining its interface, usage, and dependencies.
@@ -466,6 +481,7 @@ skills/
 ├── ppt-classify/
 ├── ppt-research-setup/
 ├── ppt-narrative-review/
+├── jordan-peterson-perspective/
 └── README.md
 ```
 
