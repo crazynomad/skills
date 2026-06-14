@@ -81,3 +81,15 @@ mlx_whisper "$WAV" --model "$MODEL" "${LANGARG[@]}" \
 
 echo ">> 完成, 产物:"
 ls -1 "$OUTDIR/$BASE".* 2>/dev/null | sed 's/^/   /'
+
+# 4) 自动验证门 — whisper(尤其 large-v3) 会在长段语音上退化成"同句无限复读"的
+#    幻觉, 或整段漏转, 只看开头根本发现不了。这里强制跑一遍 verify_transcript.py:
+#    抓重复循环 / 覆盖率缺口 / 低置信聚集。FAIL 时退出码非 0, 提醒不要直接交付。
+echo ">> 验证产出 (verify_transcript.py) ..."
+if python3 "$SCRIPT_DIR/verify_transcript.py" "$OUTDIR/$BASE.json" --audio "$SRC"; then
+  :
+else
+  echo ">> ⚠️ 验证未通过(见上面的 FAIL)。常见修法: 默认 turbo 比 large-v3 更不易循环;" >&2
+  echo ">>    或先用 ffmpeg 去头尾静音/音乐再转。请勿在未核对该段前直接交付。" >&2
+  exit 3
+fi

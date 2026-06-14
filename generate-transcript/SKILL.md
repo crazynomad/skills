@@ -31,6 +31,8 @@ bash "$SKILL_DIR/scripts/transcribe.sh" <文件路径|URL> [model] [lang] [outdi
 
 产出:同名 `.txt / .srt / .vtt / .tsv / .json`(`--output-format all`)。
 
+转录结束后脚本会**自动跑验证门** `verify_transcript.py`(见下「验证产出」),抓到复读幻觉/漏转会以非 0 退出码报 FAIL。
+
 ### 例子
 
 ```bash
@@ -54,7 +56,28 @@ bash "$SKILL_DIR/scripts/transcribe.sh" "https://youtu.be/RNF0FvRjGZk" turbo en
 | `turbo`(默认) | 809M | 强,接近 large | 比 large 快 ~8× | **多数场景的最佳平衡** |
 | `large-v3` | 1550M | 最好 | 慢 | 中文/嘈杂/术语密集、要最高精度 |
 
-经验:**英文清晰口播** turbo 足够;**中文、嘈杂环境、专业术语**优先 `large-v3`。tiny 会把 three→free、embedding→bedding 这类近音听错,中文错得更多。
+经验:**绝大多数场景默认 `turbo`,中文也包括在内。** turbo 在长音频上稳。tiny 会把 three→free、embedding→bedding 这类近音听错,中文错得更多。
+
+> ⚠️ **`large-v3` 有重复循环坍缩风险,不要无脑选它。** 实测一段 22 分钟中文播客,large-v3 在两段真实语音上退化成"同一句无限复读"(8:42→18:13 复读 569 次 + 18:42→22:43 复读 241 次),**62% 的字幕是幻觉**;同一段音频 turbo 完整正确转出。`large-v3` 只在 turbo 明显听错、且你**会跑验证门核对**时才用。模型越大 ≠ 转录越好。
+
+## 验证产出(必做,别只看开头)
+
+**这个 skill 最容易翻的车:whisper 在长段语音/静音/音乐上会退化成"同一句无限复读"的幻觉,或整段漏转。只扫开头几句一切正常,中间/结尾可能整段是垃圾。** 所以**转完必须验证,不能只采样开头就宣布完成**。
+
+脚本已内置自动验证;也可手动对任意 SRT/JSON 跑:
+
+```bash
+python3 "$SKILL_DIR/scripts/verify_transcript.py" 转录.json --audio 原音频.wav [--reference 参考.srt]
+```
+
+三道门(全部来自 whisper 自己的 JSON 元数据,无需额外模型):
+1. **覆盖率缺口** — 音频时长 vs 末条字幕结束时间。缺口大 ⇒ 漏转/被错误截断。
+2. **重复循环** — 连续相同文本 ≥4 条,或某句占比 >4% ⇒ 复读幻觉(报出时间区间)。
+3. **低置信聚集** — `compression_ratio>2.4`(whisper 内置重复度指标)/ `avg_logprob` 过低 / `no_speech_prob` 过高。
+
+退出码 `2`=FAIL。**FAIL 时绝不直接交付**:换 `turbo` 重跑、或先 ffmpeg 去头尾静音、或人工核对该段。有参考答案时加 `--reference` 比对覆盖时长。
+
+> 教训:删/截字幕前,先确认那段到底有没有真实语音(对 ground-truth 或听原音),别把"我以为是静音/音乐"当依据 —— 复读幻觉常常正是发生在**真实语音**上。
 
 ## 注意事项(踩过的坑)
 
