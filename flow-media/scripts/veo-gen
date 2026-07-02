@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+# veo-gen — 绿皮火车频道 gflow video 薄封装
+# =============================================================================
+# 固化本机 Flow Ultra 账号的已知规律:
+#   1) 账号被灰度到 Flow 新版 agentic UI → 必须 GFLOW_CLI_PREFER_CLASSIC=1,
+#      否则在"新建 project"步就 RuntimeError。
+#   2) 只对「提交前的瞬时错误」自动重试(HTTP 503 / UI 抖动 / 浏览器会话断)——
+#      这些发生在模型跑起来之前,不扣订阅额度,重试安全。
+#   3) 「提交后失败」(请求已被后端接受、模型已跑,MEDIA_GENERATION_STATUS_FAILED)
+#      很可能已扣额度 → 绝不自动重试,直接停下报告,避免空烧。
+#
+# 成功判据:gflow 自身退出码 == 0(权威),再从 --json 结果取产物路径。
+#
+# 用法:
+#   veo-gen [--retries N] [--final PATH] [--base-delay S] [--max-delay S] \
+#           -- <传给 `gflow video` 的原始参数...>
+#
+# 例(EP07 V01 首尾帧补间,成功后重命名为 V01-final.mp4):
+#   veo-gen --final asset/veo/V01-final.mp4 -- \
+#     i2v --initial-frame asset/veo/V01-start.png --end-frame asset/veo/V01-end.png \
+#         --aspect 16:9 --model veo-lite --duration 4 --out-dir asset/veo \
+#         "slow cinematic pan right across the base at dusk"
+#
+# `--` 之后一切原样透传给 `gflow video`,任何 gflow 新参数自动可用。
+# =============================================================================
+set -uo pipefail
+export PATH="$HOME/.local/bin:$PATH"
+
+RETRIES=6            # 最大尝试次数(仅对提交前瞬时错误生效)
+FINAL=""            # 成功后把产物移动到此路径(可选)
+BASE_DELAY=4         # 退避基数(秒)
+MAX_DELAY=30         # 单次退避上限(秒)
+
+die() { printf '\033[31m[veo-gen] %s\033[0m\n' "$*" >&2; exit 1; }
+info() { printf '\033[36m[veo-gen] %s\033[0m\n' "$*" >&2; }
+ok()   { printf '\033[32m[veo-gen] %s\033[0m\n' "$*" >&2; }
+
+# ---- 解析封装自身参数(遇 `--` 或首个未知 token 即停)------------------------
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --retries)    RETRIES="$2"; shift 2 ;;
+    --final)      FINAL="$2";   shift 2 ;;
+    --base-delay) BASE_DELAY="$2"; shift 2 ;;
+    --max-delay)  MAX_DELAY="$2";  shift 2 ;;
+    --)           shift; break ;;
+    -h|--help)    sed -n '2,37p' "$0"; exit 0 ;;
+    *)            break ;;
+  esac
+done
+
+[ $# -gt 0 ] || die "缺少 gflow video 参数。用法见 veo-gen --help"
+
+GARGS=("$@")
+case " ${GARGS[*]} " in *" --json "*) ;; *) GARGS+=(--json) ;; esac
+
+command -v gflow >/dev/null 2>&1 || die "找不到 gflow,请确认已 uv tool install gflow-cli 且 ~/.local/bin 在 PATH"
+
+# ---- 提交前瞬时错误类(仅这些在「未提交」时重试)----------------------------
+TRANSIENT_RE='^(WireFormatError|UnexpectedError|TransportTimeoutError|TransportError|WafRejectionError|FlowAgentUiError|BrowserSessionClosedError|BrowserEngineUnavailableError)$'
+
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/veo-gen.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+OUT_JSON="$TMP/out.json"; ERR_LOG="$TMP/err.log"
+
+# 从 --json 结果对象(排除带 event 键的日志行)取 status|class|local_path。
+# 只认「无 event 键」且含 status/succeeded/command 的对象 = 真正的结果对象。
+extract_result() {
+python3 - "$OUT_JSON" <<'PY'
+import json, sys
+try:
+    text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+except OSError:
+    print("||"); sys.exit(0)
+dec = json.JSONDecoder(); best = None; i = 0; n = len(text)
+while i < n:
+    if text[i] == '{':
+        try:
+            obj, end = dec.raw_decode(text, i)
+            if isinstance(obj, dict) and "event" not in obj and (
+                "status" in obj or "succeeded" in obj or "command" in obj):
+                best = obj
+            i = end; continue
+        except json.JSONDecodeError:
+            pass
+    i += 1
+if not best:
+    print("||"); sys.exit(0)
+status = best.get("status", "")
+cls = ""
+err = best.get("error")
+if isinstance(err, dict):
+    cls = err.get("class") or err.get("title") or ""
+lp = best.get("local_path") or ""
+if not lp:
+    for k in ("local_paths", "results"):
+        v = best.get(k)
+        if isinstance(v, list) and v:
+            f = v[0]; lp = f.get("local_path","") if isinstance(f, dict) else str(f); break
+print(f"{status}|{cls}|{lp}")
+PY
+}
+
+# 兜底:从日志里最后一个 video_saved 事件取 path
+fallback_path() {
+  grep -o '"path": "[^"]*\.mp4"' "$ERR_LOG" 2>/dev/null | tail -1 | sed 's/"path": "//; s/"$//'
+}
+
+finish_success() {  # $1 = local_path
+  local lpath="$1"
+  if [ -n "$FINAL" ] && [ -n "$lpath" ] && [ -f "$lpath" ]; then
+    mkdir -p "$(dirname "$FINAL")"; mv -f "$lpath" "$FINAL"; ok "已重命名 → $FINAL"; lpath="$FINAL"
+  fi
+  cat "$OUT_JSON" 2>/dev/null
+  [ -n "$lpath" ] && printf '\n%s\n' "$lpath"
+  exit 0
+}
+
+# ---- 重试主循环 -------------------------------------------------------------
+attempt=0
+while :; do
+  attempt=$((attempt+1))
+  info "尝试 $attempt/$RETRIES: GFLOW_CLI_PREFER_CLASSIC=1 gflow video ${GARGS[*]}"
+  GFLOW_CLI_PREFER_CLASSIC=1 gflow video "${GARGS[@]}" >"$OUT_JSON" 2>"$ERR_LOG"
+  gec=$?
+
+  IFS='|' read -r status cls lpath < <(extract_result)
+  [ -z "$lpath" ] && lpath="$(fallback_path)"
+
+  # 【第一判据】gflow 退出码 0 = 成功,一锤定音
+  if [ "$gec" -eq 0 ] || [ "$status" = "ok" ]; then
+    ok "成功(第 $attempt 次)。产物: ${lpath:-<见 --out-dir>}"
+    finish_success "$lpath"
+  fi
+
+  # 失败:先判断请求是否已被后端接受(模型是否已跑 = 是否可能已扣额度)
+  submitted=false
+  grep -q 'generate_captured' "$ERR_LOG" 2>/dev/null && submitted=true
+
+  cls_show="${cls:-<未知>}"
+  if [ "$submitted" = true ]; then
+    # 提交后失败(如 MEDIA_GENERATION_STATUS_FAILED):很可能已扣额度 → 不重试
+    info "请求已被后端接受但生成失败(可能已扣额度),不自动重试。尾部日志:"
+    tail -4 "$ERR_LOG" >&2 || true
+    die "提交后失败(exit=$gec, 错误类=$cls_show)。请检查 prompt/帧是否触发内容策略或模型异常;需要时手动重跑。"
+  fi
+
+  # 提交前失败:仅对「明确的瞬时错误类」重试(不扣额度)。
+  # 未知/空错误类不重试——避免像内容策略/参数/用法错误那样被反复空转。
+  if [[ "$cls" =~ $TRANSIENT_RE ]]; then
+    if [ "$attempt" -ge "$RETRIES" ]; then
+      die "已达最大重试次数 $RETRIES,最后错误: $cls_show(exit=$gec)。可能 Flow 后端持续不可用或 UI 变体锁死,稍后再试或跟进 issue #174。"
+    fi
+    delay=$(( BASE_DELAY * attempt + RANDOM % 4 )); [ "$delay" -gt "$MAX_DELAY" ] && delay="$MAX_DELAY"
+    info "提交前瞬时错误 $cls_show(exit=$gec)→ ${delay}s 后重试(不扣额度)"
+    sleep "$delay"; continue
+  fi
+
+  # 终端错误(内容策略/认证/参数/未知等):立即停止,不空转
+  info "终端/未知错误 $cls_show(exit=$gec),不重试。尾部日志与结果:"
+  tail -4 "$ERR_LOG" >&2 || true; cat "$OUT_JSON" >&2
+  exit "$gec"
+done
