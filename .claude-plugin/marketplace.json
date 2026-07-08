@@ -57,6 +57,15 @@
         "./ppt-research-setup",
         "./ppt-narrative-review"
       ]
+    },
+    {
+      "name": "greentrain-dev",
+      "description": "Green Train dev-workflow skills: GitHub backlog governance as a manager loop (backlog-manager) — triage labels, append-only description completion, bounded ready queue (Todo ≤ 5) on a Projects board, board drift repair. Config-driven per repo via .claude/backlog-manager.yaml, DRY-RUN by default.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./backlog-manager"
+      ]
     }
   ]
 }

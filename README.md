@@ -48,6 +48,7 @@ Run the following command in Claude Code:
 /plugin install greentrain-media@greentrain-skills
 /plugin install greentrain-files@greentrain-skills
 /plugin install greentrain-planning@greentrain-skills
+/plugin install greentrain-dev@greentrain-skills
 ```
 
 **Option 3: Ask the Agent**
@@ -64,12 +65,13 @@ Simply tell Claude Code:
 | **greentrain-files** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 | **greentrain-planning** | Think-before-you-slide PPT methodology: classify, research-driven thesis, storyline review | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
 | **greentrain-perspectives** | Persona thinking-framework advisors distilled with nuwa-skill | [jordan-peterson-perspective](#jordan-peterson-perspective) |
+| **greentrain-dev** | GitHub backlog governance: issue triage, bounded ready queue, board drift repair | [backlog-manager](#backlog-manager) |
 
 For more details, visit **https://skills.sh/docs**.
 
 ## Available Skills
 
-Skills are organized into four categories:
+Skills are organized into five categories:
 
 ### File Management (macOS)
 
@@ -460,6 +462,18 @@ Jordan Peterson (the "lobster professor") as a thinking advisor. Distilled from 
 
 **Dependencies**: None (prompt-based; uses WebSearch for fact-dependent questions)
 
+### Dev Workflow
+
+#### backlog-manager
+
+GitHub backlog governance as a manager loop. Triages open issues (type labels + routing labels `agent:ready` / `needs:human`), appends structured completion blocks to thin issue descriptions (**never edits your original text**), maintains a bounded ready queue (Todo ≤ 5) on a GitHub Projects board, and repairs board drift (closed issue still sitting in "In Progress", etc.). Battle-tested on a real repo: 30 issues fully triaged, then 10+ zero-drift patrol rounds driven by `/loop`.
+
+Config-driven: reads `.claude/backlog-manager.yaml` from the target repo (repo, board IDs, label set, project-specific rules) and runs a guided init flow to generate it if missing. **DRY-RUN by default** — it only reports planned actions until you pass `apply`. Hard red lines: never closes issues, never edits titles or user-written text, never touches code.
+
+**When to Use**: "groom the backlog", "triage issues", "整理 backlog", "维护看板" — recurring backlog governance, ideally scheduled with `/loop`.
+
+**Dependencies**: GitHub CLI (`gh`) authenticated with `repo` + `project` scopes
+
 ## Structure
 
 Each skill is contained in its own directory with a `SKILL.md` file defining its interface, usage, and dependencies.
@@ -482,6 +496,7 @@ skills/
 ├── ppt-research-setup/
 ├── ppt-narrative-review/
 ├── jordan-peterson-perspective/
+├── backlog-manager/
 └── README.md
 ```
 

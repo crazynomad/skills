@@ -48,6 +48,7 @@ npx skills add crazynomad/skills
 /plugin install greentrain-media@greentrain-skills
 /plugin install greentrain-files@greentrain-skills
 /plugin install greentrain-planning@greentrain-skills
+/plugin install greentrain-dev@greentrain-skills
 ```
 
 **方式三：告诉 Agent**
@@ -64,12 +65,13 @@ npx skills add crazynomad/skills
 | **greentrain-files** | macOS 磁盘清理、文件整理、文档智能 | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 | **greentrain-planning** | PPT 方法论：先想清楚再开 PowerPoint。PPT 分类、研究型立论、故事线评审 | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
 | **greentrain-perspectives** | 人物思维框架顾问，由女娲造人（nuwa-skill）蒸馏 | [jordan-peterson-perspective](#jordan-peterson-perspective) |
+| **greentrain-dev** | GitHub backlog 治理：issue 分诊、ready 队列、看板漂移修复 | [backlog-manager](#backlog-manager) |
 
 更多详情请访问 **https://skills.sh/docs**。
 
 ## 可用技能
 
-技能分为四大类：
+技能分为五大类：
 
 ### 文件管理（macOS）
 
@@ -460,6 +462,18 @@ python youtube-downloader/scripts/download_video.py "URL" -o ./videos
 
 **依赖**：无（纯提示词；事实型问题会调用 WebSearch）
 
+### 开发工作流
+
+#### backlog-manager
+
+把 GitHub backlog 治理做成 manager loop。给 open issue 分诊（类型标签 + 路由标签 `agent:ready` / `needs:human`）、给单薄的 issue 描述**末尾追加**结构化补全区块（绝不改动你写的原文）、在 GitHub Projects 看板上维护 Todo ≤ 5 的 ready 队列、修复看板漂移（issue 已关闭但卡片还在"进行中"等）。已在真实仓库实战：30 个 issue 全量分诊 + `/loop` 驱动 10+ 轮零漂移巡检。
+
+配置驱动：读取目标仓库的 `.claude/backlog-manager.yaml`（仓库、看板 ID、标签集、项目特例规则），缺配置时走引导式 init 流程生成。**默认 DRY-RUN**——只输出拟执行动作清单，传 `apply` 才真正落盘。硬红线：不关 issue、不改标题、不动用户原文、不碰代码。
+
+**使用时机**：「整理 backlog」「issue 分诊」「维护看板」——周期性 backlog 治理，与 `/loop` 搭配最佳。
+
+**依赖**：GitHub CLI（`gh`），需 `repo` + `project` 权限
+
 ## 目录结构
 
 每个技能独立一个目录，通过 `SKILL.md` 定义接口、用法和依赖。
@@ -482,6 +496,7 @@ skills/
 ├── ppt-research-setup/
 ├── ppt-narrative-review/
 ├── jordan-peterson-perspective/
+├── backlog-manager/
 └── README.md
 ```
 
