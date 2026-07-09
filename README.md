@@ -65,7 +65,7 @@ Simply tell Claude Code:
 | **greentrain-files** | macOS disk cleaning, file organizing, document intelligence | [file-master](#file-master), [disk-cleaner](#disk-cleaner), [file-organizer](#file-organizer), [doc-mindmap](#doc-mindmap) |
 | **greentrain-planning** | Think-before-you-slide PPT methodology: classify, research-driven thesis, storyline review | [ppt-classify](#ppt-classify), [ppt-research-setup](#ppt-research-setup), [ppt-narrative-review](#ppt-narrative-review) |
 | **greentrain-perspectives** | Persona thinking-framework advisors distilled with nuwa-skill | [jordan-peterson-perspective](#jordan-peterson-perspective) |
-| **greentrain-dev** | GitHub backlog governance: issue triage, bounded ready queue, board drift repair | [backlog-manager](#backlog-manager) |
+| **greentrain-dev** | GitHub backlog governance + loop decision-making | [backlog-manager](#backlog-manager), [loop-or-not](#loop-or-not) |
 
 For more details, visit **https://skills.sh/docs**.
 
@@ -474,6 +474,16 @@ Config-driven: reads `.claude/backlog-manager.yaml` from the target repo (repo, 
 
 **Dependencies**: GitHub CLI (`gh`) authenticated with `repo` + `project` scopes
 
+#### loop-or-not
+
+A decision ruler for loop engineering: given a task, it rules **don't loop / timer loop (`/loop`, `/schedule`) / goal loop (`/goal`)** — with evidence. It inspects the repo first (runnable tests, CI, bench scripts = available verifiers; issue/PR queues = recurring work; module boundaries), then interviews you one question at a time on the genuine decisions only (facts are looked up, never asked). When a loop is warranted, it drafts a four-part contract (goal / verification / boundary / stop) whose verification binds to real commands found in your repo — no placeholders.
+
+Honest by design: **recommending NO loop is a first-class outcome**, and model-graded verification gets an explicit downgrade warning. Downstream work is referred, not rebuilt: pattern selection and production hardening go to [cobusgreyling/loop-engineering](https://github.com/cobusgreyling/loop-engineering); GitHub backlog cases go to `backlog-manager`. Interview mechanics adapted from [mattpocock/skills](https://github.com/mattpocock/skills)' grilling.
+
+**When to Use**: "值不值得 loop", "should I loop this task", "要不要上 /goal", "这个活能不能挂个循环自动跑"
+
+**Dependencies**: None (prompt-based; uses `gh` when inspecting GitHub queues)
+
 ## Structure
 
 Each skill is contained in its own directory with a `SKILL.md` file defining its interface, usage, and dependencies.
@@ -497,6 +507,7 @@ skills/
 ├── ppt-narrative-review/
 ├── jordan-peterson-perspective/
 ├── backlog-manager/
+├── loop-or-not/
 └── README.md
 ```
 
