@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""gflow 会话健康探针——只读 Chrome Cookies DB 元数据(不解密不打印值),JSONL 落盘。
+用途:诊断"每日 401"——记录 labs.google 会话 token 的存在/创建/过期,与 google 账号 cookie 状态。
+用法: session-probe [--verbose]   日志: ~/.claude/skills/flow-media/session-health.log
+cron: 0 */2 * * * (装机见 SKILL.md 排障表)"""
+import sqlite3, shutil, os, json, sys, time, datetime, subprocess
+
+PROFILE = os.path.expanduser("~/Library/Application Support/gflow-cli/profile_greentrainpodcast/Default/Cookies")
+LOG = os.path.expanduser("~/.claude/skills/flow-media/session-health.log")
+
+def chrome_ts(us):
+    if not us: return None
+    return (datetime.datetime(1601,1,1) + datetime.timedelta(microseconds=us)).strftime('%Y-%m-%d %H:%M:%S')
+
+rec = {"ts": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "probe": "ok"}
+try:
+    ver = subprocess.run(["gflow","--version"],capture_output=True,text=True,timeout=10).stdout.strip()
+    rec["gflow"] = ver.split()[-1] if ver else "?"
+except Exception:
+    rec["gflow"] = "?"
+try:
+    tmp = f"/tmp/ck-probe-{os.getpid()}.db"
+    shutil.copy2(PROFILE, tmp)
+    db = sqlite3.connect(tmp)
+    rows = db.execute("SELECT host_key,name,creation_utc,expires_utc,last_access_utc FROM cookies").fetchall()
+    os.remove(tmp)
+    sess = [r for r in rows if 'labs.google' in r[0] and 'session-token' in r[1]]
+    sid  = [r for r in rows if r[0]=='.google.com' and r[1]=='SID']
+    rec["labs_session_token"] = bool(sess)
+    if sess:
+        r = sess[0]
+        rec["session_created"] = chrome_ts(r[2]); rec["session_expires"] = chrome_ts(r[3]); rec["session_last_access"] = chrome_ts(r[4])
+    rec["google_sid_present"] = bool(sid)
+    if sid: rec["google_sid_expires"] = chrome_ts(sid[0][3])
+    rec["labs_cookie_names"] = sorted({r[1] for r in rows if 'labs.google' in r[0]})
+except Exception as e:
+    rec["probe"] = f"fail:{e}"
+with open(LOG, "a") as f:
+    f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+if "--verbose" in sys.argv:
+    print(json.dumps(rec, ensure_ascii=False, indent=1))
