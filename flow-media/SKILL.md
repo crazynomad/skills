@@ -34,9 +34,17 @@ version: 0.1.0
 ```bash
 # 1. 安装(国内用清华镜像,直连 PyPI 的 40MB playwright wheel 会断)
 UV_DEFAULT_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple" uv tool install gflow-cli
-# 2. 登录(需真 Chrome;它另开一个专属 profile 的 Chrome 窗口,登到 Flow 编辑器后关那个窗口,gflow 自动验证落盘)
+# 2. 登录(需真 Chrome;它另开一个专属 profile 的 Chrome 窗口)。⚠ 三步缺一不可(2026-07-24 定为标准 SOP):
 gflow auth login --browser chrome        # macOS 必须 --browser chrome
-gflow auth status                         # 确认 cookies_present: True
+#    a) 登到 Flow 编辑器(labs.google/fx/tools/flow 出现即 NextAuth session 已铸);
+#    b) 【关键·防日抛】同一窗口再开 google.com 标签页确认已登录(通常 OAuth 后已自动带上;
+#       若右上角无头像则登录一次)——把 SID/LSID 等【账号层长效 cookie】留在 profile 里。
+#       原理:Flow 的 NextAuth session 服务端 ~24h 滚动、闲置即死;有 SID 层,session 死后
+#       labs.google 的 OAuth 跳转会经 accounts.google.com 静默重铸,日抛→月抛(nlm 同款存父凭据思路);
+#       veo-gen 已内置认证失效单次兜底重试。无 SID 层则每次闲置>1天都要人工重登。
+#    c) 等 ≥5 秒再 Cmd+Q 整个退出该 Chrome(cookie 异步落盘,关快了丢)。
+gflow auth status                         # 确认 cookies_present: True(⚠只查文件存在,非会话有效)
+~/.claude/skills/flow-media/scripts/session-probe --verbose | grep google_sid   # 确认 google_sid_present: true
 ```
 > Chromium 引擎(`playwright install chromium`)在国内走 `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright`;但 `--browser chrome` 用系统 Chrome,通常不需要 bundled Chromium。
 
@@ -84,10 +92,22 @@ scripts/veo-gen --final out/scene01.mp4 -- \
 | 现象 | 含义 | 处理 |
 |---|---|---|
 | `RuntimeError` / new_project 不跳转 | 视频裸调撞新版 UI | 用 veo-gen(带 PREFER_CLASSIC) |
+| `UiSelectorDriftError` / 连 classic 切换元件都找不到 | gflow-cli 版本过旧、Flow 前端已改版(PREFER_CLASSIC 也救不了)。发生在**提交前·不扣额度** | **先 `uv tool upgrade gflow-cli`** 再试(EP14:0.24.0→0.35.0 即通;镜像慢可 `--index https://pypi.tuna.tsinghua.edu.cn/simple`) |
 | `WireFormatError` HTTP 503 | 后端瞬时(提交前) | 重试(不扣额度);veo-gen 自动 |
 | `MEDIA_GENERATION_STATUS_FAILED` | 提交后失败(已扣额度) | **别重试**,查 prompt/帧/内容策略 |
-| `AuthExpiredError` / 401 | 会话过期 | 重跑 `gflow auth login --browser chrome` |
+| `AuthExpiredError` / 401 | 会话过期。⚠ `auth status` 的 `cookies_present: True` **只查 cookie 文件存在,不代表会话有效**——久未使用先跑一次便宜生图探活,别信 status | **先原样重跑一次**(profile 有 SID 层时首次 401 的访问往往已静默重铸好新 session;veo-gen 自动兜);二连败才 `gflow auth login --browser chrome`(按前置 SOP 三步含补 SID)。⚠ macOS 关窗≠退程序:登录完成后必须**整个退出**那个 gflow 专属 Chrome 实例(Cmd+Q 或 kill 其主进程),gflow 等的是浏览器进程退出才落盘 cookies |
+| 连续快速提交反复 `UnexpectedError` | Flow 对连发节流(2026-07-17 实测:批量中不歇气的条目连撞 4 次,单发的全一次过) | **批量生成条目之间歇 ≥20s**;veo-gen 的退避只管单条内,不管条目间 pacing |
+| profile 锁 / `SingletonLock` 类失败 | 残留 Chrome 进程占着 gflow profile(常见于 auth login 没退干净) | `pgrep -f profile_greentrainpodcast` 找到残留进程 kill 掉再跑 |
 | `--json` 报 No such option | upscale 不支持 --json | upscale 命令去掉 --json |
+| 「每日 401」排错 | **已定案(2026-07-21 实锤)**:服务端作废——token 创建 07-20 09:19/客户端有效期 30 天/探针 7 连报健在,闲置 ≈35h 后 401。模型=NextAuth 会话服务端 ~24h 滚动时效:**使用即续签、闲置即死**(所以像"日抛")。且 profile 全程无 google.com SID(`google_sid_present:false`)→ 会话死后无 SSO 可静默续签,只能交互登录。**改造已落地(2026-07-24,参考 nlm 存父凭据思路)**:登录 SOP 升级为三步(含补 google.com SID 层,见前置)+ veo-gen 认证失效单次兜底(首撞 401 的访问往往已被 SSO 静默重铸,重试即过)——SID 在则日抛→月抛,保活 cron 不再需要。⚠ 登录后别立刻 kill Chrome(cookie 异步落盘会丢),等 5s。⚠ 待长闲置(>36h)实测验证一轮后此案彻底关闭 | 查 `session-health.log` 时间线 |
+| 0.40 `--project` 进已有项目崩溃 | 新 UI unhandled error / classic UiSelectorDrift(2026-07-20 实测,双路皆断) | 暂散建 scratch(台账注明例外),等上游;别 --adopt-latest 认领 scratch |
+
+## 项目复用(通用机制 + 本地约定)
+
+- `gflow image/video` 均支持 `--project <id>`:在既有 Flow 项目里生成,媒体库不碎片化,且 i2v 可用 in-project 素材 UUID 免重复上传。
+- `scripts/veo-gen` 认环境变量 **`GFLOW_PROJECT`**(自动追加 --project;命令行已带则不覆盖)。
+- **项目 id 从哪来是各仓库的本地约定,本 skill 不做仓库/集数探测**。例:绿皮火车 studio 仓库用 `tools/flow/ep-project.sh`(remote 校验→定位 epXX→读写集根 `.flow-project`;首次生成后 `--adopt-latest` 认领)。其他项目可自定义同类解析器。
+- 首次链路:第 1 次生成不带 --project(Flow 自动建项目)→ 认领其 id → 后续全部带上。
 
 ## 成本护栏
 - `--tool creative-director`(提示词扩写)走**付费 Gemini API**(需 `GFLOW_CLI_GEMINI_API_KEY`),不设不产生费用。想省钱自己写好 prompt。

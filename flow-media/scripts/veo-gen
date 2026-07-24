@@ -52,6 +52,11 @@ done
 
 GARGS=("$@")
 case " ${GARGS[*]} " in *" --json "*) ;; *) GARGS+=(--json) ;; esac
+# 通用:GFLOW_PROJECT 环境变量 → 追加 --project(项目内复用素材/媒体库不碎片化)。
+# 项目 id 怎么来是调用方(各仓库本地约定)的事,本封装不做仓库探测。
+if [ -n "${GFLOW_PROJECT:-}" ]; then
+  case " ${GARGS[*]} " in *" --project "*) ;; *) GARGS+=(--project "$GFLOW_PROJECT") ;; esac
+fi
 
 command -v gflow >/dev/null 2>&1 || die "找不到 gflow,请确认已 uv tool install gflow-cli 且 ~/.local/bin 在 PATH"
 
@@ -117,6 +122,7 @@ finish_success() {  # $1 = local_path
 
 # ---- 重试主循环 -------------------------------------------------------------
 attempt=0
+auth_retried=0   # 认证失效只兜一次(SSO 静默重铸,见下)
 while :; do
   attempt=$((attempt+1))
   info "尝试 $attempt/$RETRIES: GFLOW_CLI_PREFER_CLASSIC=1 gflow video ${GARGS[*]}"
@@ -125,6 +131,13 @@ while :; do
 
   IFS='|' read -r status cls lpath < <(extract_result)
   [ -z "$lpath" ] && lpath="$(fallback_path)"
+
+  # 病历本:每次尝试落一行(时间|第几次|退出码|错误类|是否已提交|参数摘要)——"为什么老重试"从此拿数据回答
+  ATT_LOG="$(dirname "$0")/../attempts.log"
+  _sub=false; grep -q 'generate_captured' "$ERR_LOG" 2>/dev/null && _sub=true
+  printf '%s|attempt=%s|exit=%s|class=%s|submitted=%s|gflow=%s|args=%.80s\n' \
+    "$(date '+%Y-%m-%d %H:%M:%S')" "$attempt" "$gec" "${cls:-none}" "$_sub" \
+    "$(gflow --version 2>/dev/null | grep -o '[0-9.]*$')" "${GARGS[*]}" >> "$ATT_LOG" 2>/dev/null || true
 
   # 【第一判据】gflow 退出码 0 = 成功,一锤定音
   if [ "$gec" -eq 0 ] || [ "$status" = "ok" ]; then
@@ -155,7 +168,17 @@ while :; do
     sleep "$delay"; continue
   fi
 
-  # 终端错误(内容策略/认证/参数/未知等):立即停止,不空转
+  # 认证失效(提交前,不扣额度):SSO 静默重铸兜底(2026-07-24)——
+  # profile 登录 SOP 补了 google.com SID 后,NextAuth session 过期时 labs.google 的
+  # OAuth 跳转会经 accounts.google.com 静默重铸新 session(首次撞 401 的那次访问往往已完成重铸落盘)。
+  # 故认证类失败立即重试一次即可通过;只兜一次——第二次仍失败=SSO 层也没了,须人工 gflow auth login。
+  if [ "$auth_retried" -eq 0 ] && { [[ "${cls:-}" == *Auth* ]] || grep -qi 'AuthExpired\|auth login' "$ERR_LOG" 2>/dev/null; }; then
+    auth_retried=1
+    info "认证失效(提交前,不扣额度)→ 8s 后重试一次(赌 profile 内 SID 已静默重铸 session;再失败=需人工重登)"
+    sleep 8; continue
+  fi
+
+  # 终端错误(内容策略/认证二连败/参数/未知等):立即停止,不空转
   info "终端/未知错误 $cls_show(exit=$gec),不重试。尾部日志与结果:"
   tail -4 "$ERR_LOG" >&2 || true; cat "$OUT_JSON" >&2
   exit "$gec"
