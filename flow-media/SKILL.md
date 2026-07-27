@@ -37,11 +37,11 @@ UV_DEFAULT_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple" uv tool install gflo
 # 2. 登录(需真 Chrome;它另开一个专属 profile 的 Chrome 窗口)。⚠ 三步缺一不可(2026-07-24 定为标准 SOP):
 gflow auth login --browser chrome        # macOS 必须 --browser chrome
 #    a) 登到 Flow 编辑器(labs.google/fx/tools/flow 出现即 NextAuth session 已铸);
-#    b) 【关键·防日抛】同一窗口再开 google.com 标签页确认已登录(通常 OAuth 后已自动带上;
-#       若右上角无头像则登录一次)——把 SID/LSID 等【账号层长效 cookie】留在 profile 里。
-#       原理:Flow 的 NextAuth session 服务端 ~24h 滚动、闲置即死;有 SID 层,session 死后
-#       labs.google 的 OAuth 跳转会经 accounts.google.com 静默重铸,日抛→月抛(nlm 同款存父凭据思路);
-#       veo-gen 已内置认证失效单次兜底重试。无 SID 层则每次闲置>1天都要人工重登。
+#    b) ⚠【SSO 补 SID 方案已实测否决(2026-07-27)】曾按 nlm"存父凭据"思路在此步补登 google.com
+#       留 SID 层赌静默重铸——实测 Google 给这个自动化 profile 发的账号层 cookie 是 session 级,
+#       下次 Chrome 启动即被清(07-24 登录时 SID 在,一次生成任务后消失,66h 闲置后 401 无重铸)。
+#       此步不必再做;根治候选=keepalive 定时触达(方案已备,暂未上,用户 hold 2026-07-27)。
+#       veo-gen 的认证失效单次兜底重试保留(无害,万一政策变化白捡)。
 #    c) 等 ≥5 秒再 Cmd+Q 整个退出该 Chrome(cookie 异步落盘,关快了丢)。
 gflow auth status                         # 确认 cookies_present: True(⚠只查文件存在,非会话有效)
 ~/.claude/skills/flow-media/scripts/session-probe --verbose | grep google_sid   # 确认 google_sid_present: true
@@ -99,7 +99,7 @@ scripts/veo-gen --final out/scene01.mp4 -- \
 | 连续快速提交反复 `UnexpectedError` | Flow 对连发节流(2026-07-17 实测:批量中不歇气的条目连撞 4 次,单发的全一次过) | **批量生成条目之间歇 ≥20s**;veo-gen 的退避只管单条内,不管条目间 pacing |
 | profile 锁 / `SingletonLock` 类失败 | 残留 Chrome 进程占着 gflow profile(常见于 auth login 没退干净) | `pgrep -f profile_greentrainpodcast` 找到残留进程 kill 掉再跑 |
 | `--json` 报 No such option | upscale 不支持 --json | upscale 命令去掉 --json |
-| 「每日 401」排错 | **已定案(2026-07-21 实锤)**:服务端作废——token 创建 07-20 09:19/客户端有效期 30 天/探针 7 连报健在,闲置 ≈35h 后 401。模型=NextAuth 会话服务端 ~24h 滚动时效:**使用即续签、闲置即死**(所以像"日抛")。且 profile 全程无 google.com SID(`google_sid_present:false`)→ 会话死后无 SSO 可静默续签,只能交互登录。**改造已落地(2026-07-24,参考 nlm 存父凭据思路)**:登录 SOP 升级为三步(含补 google.com SID 层,见前置)+ veo-gen 认证失效单次兜底(首撞 401 的访问往往已被 SSO 静默重铸,重试即过)——SID 在则日抛→月抛,保活 cron 不再需要。⚠ 登录后别立刻 kill Chrome(cookie 异步落盘会丢),等 5s。⚠ 待长闲置(>36h)实测验证一轮后此案彻底关闭 | 查 `session-health.log` 时间线 |
+| 「每日 401」排错 | **已定案(2026-07-21 实锤)**:服务端作废——token 创建 07-20 09:19/客户端有效期 30 天/探针 7 连报健在,闲置 ≈35h 后 401。模型=NextAuth 会话服务端 ~24h 滚动时效:**使用即续签、闲置即死**(所以像"日抛")。且 profile 全程无 google.com SID(`google_sid_present:false`)→ 会话死后无 SSO 可静默续签,只能交互登录。**SSO 补 SID 改造已实测否决(2026-07-27)**:66h 闲置后 401、无静默重铸——Google 给自动化 profile 发的账号层 cookie 是 session 级(登录当时 SID 在,一次生成任务后被 Chrome 启动清理;OTZ/GAPS 同灭),父凭据存不住,nlm 思路在浏览器-profile 架构里不成立(nlm 靠抄 cookie 进自管 auth.json 脱离浏览器生命周期)。上游 0.44 无保活/续签机制(issue 全是"证在手怎么用对",没人碰"证闲置过期")。现状=接受人工重登(闲置>1天即死);根治候选=keepalive 每≤12h launchd 触达(方案已备,用户 hold 2026-07-27);veo-gen 401 单次兜底保留。⚠ 登录后别立刻 kill Chrome(cookie 异步落盘会丢),等 5s | 查 `session-health.log` 时间线 |
 | 0.40 `--project` 进已有项目崩溃 | 新 UI unhandled error / classic UiSelectorDrift(2026-07-20 实测,双路皆断) | 暂散建 scratch(台账注明例外),等上游;别 --adopt-latest 认领 scratch |
 
 ## 项目复用(通用机制 + 本地约定)
