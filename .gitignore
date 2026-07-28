@@ -10,3 +10,10 @@ package-lock.json
 visual-deck/examples/*/deck.pptx
 visual-deck/examples/*/images/
 .venv/
+
+# Skill 运行时状态(不是代码,不入库)
+# flow-media 的 veo-gen 把「病历本」写在 skill 目录里;motion-explainer 的
+# 副本已改成写到运行目录($PWD / VEO_GEN_LOG),新 skill 别再往仓库里写状态。
+flow-media/attempts.log
+flow-media/session-health.log
+*/veo-gen-attempts.log
